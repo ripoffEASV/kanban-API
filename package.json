@@ -16,5 +16,13 @@
   "bugs": {
     "url": "https://github.com/ripoffEASV/kanban-API/issues"
   },
-  "homepage": "https://github.com/ripoffEASV/kanban-API#readme"
+  "homepage": "https://github.com/ripoffEASV/kanban-API#readme",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "mongoose": "^8.1.1",
+    "nodemon": "^3.0.3"
+  }
 }
