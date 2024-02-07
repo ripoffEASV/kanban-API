@@ -10,7 +10,7 @@ const uri =
   ":" +
   DB_PASS +
   "@cluster0.emxb89l.mongodb.net/?retryWrites=true&w=majority";
-
+mongoose.connect(process.env.DB_URI);
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -36,13 +36,11 @@ const stateRoute = require("./Routes/StateRoute");
 const taskRoute = require("./Routes/TaskRoute");
 const userRoute = require("./Routes/UserRoute");
 
-mongoose.connect(uri);
-
 // app.use(organizationRoute);
 // app.use(projectRoute);
 // app.use(stateRoute);
 // app.use(taskRoute);
-app.use(userRoute);
+app.use("/api/users", userRoute);
 
 app.listen(PORT, async () => {
   console.log("Server Listening on PORT:", PORT);
