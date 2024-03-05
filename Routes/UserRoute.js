@@ -1,11 +1,7 @@
 const router = require("express").Router();
 const users = require("../Models/userModel");
-const mongoose = require("mongoose");
-//const router = express().router;
 
-router.post("/helloCars", async (req, res) => {
-  res.send("hello world!");
-});
+const verifyToken = require("../auth");
 
 router.post("/addUser", async (req, res) => {
   const data = req.body;
@@ -20,16 +16,6 @@ router.post("/addUser", async (req, res) => {
         message: err.message,
       });
     });
-
-  //   try {
-  //     data = req.body;
-  //     console.log(req.body);
-  //     console.log(data);
-  //     Users.insert(data);
-  //     res.status(200).send("ok?");
-  //   } catch (err) {
-  //     res.status(500).send({ message: err.message });
-  //   }
 });
 
 router.get("/", (req, res) => {
@@ -44,7 +30,6 @@ router.get("/", (req, res) => {
     })
     .finally(() => {
       console.log("request completed");
-      //mongoose.disconnect;
     });
 });
 
@@ -60,9 +45,41 @@ router.get("/findByEmail/:email", (req, res) => {
     })
     .finally(() => {
       console.log("request completed");
-      //mongoose.disconnect;
     });
 });
 
+router.post("/login", (req, res) => {
+  const data = req.body;
+
+  const user = users.find({ email: data.email, password: data.password });
+  if (!user) {
+    res
+      .status(404)
+      .json({ Message: "No user found with provided information" });
+  } else {
+    //console.log(user);
+
+    const tokenEmail = user.email + ":" + Date.now().toString(); // date.now() is for creating an UID
+
+    const token = jwt.sign(
+      {
+        exp: Date.now() / 1000 + 60 * 60 * 24, // token should expire in 24 hours
+        data: tokenEmail,
+      },
+      process.env.SECRET
+    );
+
+    res.header("auth-token", token).json({
+      error: null,
+      data: {
+        Status: 200,
+        Message: "Token signed successfully",
+        data: token,
+      },
+    });
+
+    //res.status(200).json({ Message: "User Logged in" });
+  }
+});
 
 module.exports = router;
