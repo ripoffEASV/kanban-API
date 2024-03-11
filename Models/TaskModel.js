@@ -2,16 +2,16 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const taskSchema = new Schema({
-  TaskID: { type: Number },
-  TaskTitle: { type: String },
-  TaskDescription: { type: String },
-  HoursExpected: { type: Number },
-  HoursSpent: { type: Number },
-  LabelColor: { type: String },
-  LabelText: { type: String },
-  ParentTaskID: { type: Number },
-  AssignedToID: { type: Array },
-  CreatedByID: { type: Number },
+  taskID: { type: Number },
+  taskTitle: { type: String },
+  taskDescription: { type: String },
+  hoursExpected: { type: Number },
+  hoursSpent: { type: Number },
+  labelColor: { type: String },
+  labelText: { type: String },
+  parentTaskID: { type: Number },
+  assignedToID: { type: Array },
+  createdByID: { type: Number },
 });
 
 modoule.export = mongoose.Model("tasks", taskSchema);
