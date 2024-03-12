@@ -1,13 +1,11 @@
-const router = require("express").Router();
+const express = require("express");
+const app = express();
 const users = require("../Models/userModel");
-const mongoose = require("mongoose");
-//const router = express().router;
+const jwt = require("jsonwebtoken");
 
-router.post("/helloCars", async (req, res) => {
-  res.send("hello world!");
-});
+const verifyToken = require("../auth");
 
-router.post("/addUser", async (req, res) => {
+app.post("/addUser", async (req, res) => {
   const data = req.body;
   users
     .insertMany(data)
@@ -20,19 +18,9 @@ router.post("/addUser", async (req, res) => {
         message: err.message,
       });
     });
-
-  //   try {
-  //     data = req.body;
-  //     console.log(req.body);
-  //     console.log(data);
-  //     Users.insert(data);
-  //     res.status(200).send("ok?");
-  //   } catch (err) {
-  //     res.status(500).send({ message: err.message });
-  //   }
 });
 
-router.get("/", (req, res) => {
+app.get("/", (req, res) => {
   users
     .find({})
     .then((data) => {
@@ -44,11 +32,10 @@ router.get("/", (req, res) => {
     })
     .finally(() => {
       console.log("request completed");
-      //mongoose.disconnect;
     });
 });
 
-router.get("/findByEmail/:email", (req, res) => {
+app.get("/findByEmail/:email", (req, res) => {
   users
     .findOne({ Email: req.params.email })
     .then((data) => {
@@ -60,9 +47,127 @@ router.get("/findByEmail/:email", (req, res) => {
     })
     .finally(() => {
       console.log("request completed");
-      //mongoose.disconnect;
     });
 });
 
+app.get("/logout/:token", async (req, res) => {
+  const token = req.params.token.split(" ")[1];
 
-module.exports = router;
+  //Delete stored user if logging in twice
+  req.session.user.forEach((element, index) => {
+    console.log(element, index);
+    if (element.token == token) {
+      console.log("match");
+      //req.session.user.splice(index, 1);
+    }
+  });
+
+  res.status(200).json({ message: "successfully logged out" });
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const data = req.body;
+
+    const user = await users.findOne({
+      email: data.email,
+      password: data.password,
+    });
+    if (!user) {
+      res
+        .status(404)
+        .json({ Message: "No user found with provided information" });
+    } else {
+      const tokenData = {
+        email: user.email,
+        id: user._id,
+        //expire: Date.now() / 1000 + 60 * 60 * 24,
+      };
+
+      //const tokenEmail = user.email + ":" + Date.now().toString(); // date.now() is for creating an UID
+
+      const token = jwt.sign(
+        {
+          exp: Date.now() / 1000 + 60 * 60 * 24, // token should expire in 24 hours
+          data: tokenData,
+        },
+        process.env.SECRET
+      );
+
+      console.log("created cookie: ", token);
+
+      res.cookie("auth-token", token, {
+        httpOnly: true,
+        secure: true,
+        domain: "localhost",
+        path: "/",
+        sameSite: "none",
+      });
+
+      // console.log(req.session ? "session exists" : "session doesnt exist");
+      // if (typeof req.session.user !== "undefined") {
+      //   // Example: Delete item with id 2
+      //   deleteItemById(req.session.user, user._id);
+      // } else {
+      //   req.session.user = [];
+      // }
+
+      // req.session.user.push({ id: user._id, email: user.email, token: token });
+      // console.log(req.session.user);
+
+      // if (!Array.isArray(req.session.user)) {
+      //   req.session.user = [];
+      // }
+      // if (req.session.length) {
+      //   //Delete stored user if logging in twice
+
+      //   req.session.user.forEach((element, index) => {
+      //     if (element.email == data.email) {
+      //       req.session.user.splice(index, 1);
+      //     }
+      //   });
+      // }
+
+      // //add info to session storage
+      // req.session.user.push({
+      //   email: user.email,
+      //   token: token,
+      //   id: user._id,
+      // });
+
+      //await req.session.save();
+
+      // res.header("auth-token", token).json({
+      //   error: null,
+      //   data: {
+      //     Status: 200,
+      //     Message: "Token signed successfully",
+      //     data: token,
+      //   },
+      // });
+
+      res.status(200).json({
+        error: null,
+        data: {
+          Status: 200,
+          Message: "Token signed successfully",
+          data: token,
+        },
+      });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+// Function to find and delete an item from the array
+const deleteItemById = (array, itemId) => {
+  const index = array.findIndex((item) => item.id === itemId);
+
+  if (index !== -1) {
+    // If the item is found, remove it from the array
+    array.splice(index, 1);
+  }
+};
+
+module.exports = app;
