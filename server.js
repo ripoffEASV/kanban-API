@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+require("dotenv-flow").config();
 
 mongoose.connect(process.env.DB_URI);
 const express = require("express");
