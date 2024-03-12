@@ -24,6 +24,7 @@ app.post("/addNewOrganization", verifyToken, async (req, res) => {
       .catch((err) => {
         res.status(500).send({
           message: "There was an error adding a new Organization",
+          error: err.message,
         });
       });
   } catch (error) {
