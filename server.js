@@ -7,6 +7,7 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const app = express();
+const cookieParser = require("cookie-parser");
 
 app.use(
   cors({
@@ -15,59 +16,61 @@ app.use(
   })
 );
 
-const authenticateUser = (req, res, next) => {
-  try {
-    if (
-      req.session &&
-      req.session.id &&
-      req.session.email &&
-      req.session.token
-    ) {
-      // If authenticated, extract user information from session
-      const userId = req.session.id;
-      const userEmail = req.session.email;
-      const userToken = req.session.token;
+app.use(cookieParser());
 
-      console.log("new request");
+// const authenticateUser = (req, res, next) => {
+//   try {
+//     if (
+//       req.session &&
+//       req.session.id &&
+//       req.session.email &&
+//       req.session.token
+//     ) {
+//       // If authenticated, extract user information from session
+//       const userId = req.session.id;
+//       const userEmail = req.session.email;
+//       const userToken = req.session.token;
 
-      // Attach user information to the request object
-      req.session.user.push({ id: userId, email: userEmail, token: userToken });
-    }
+//       console.log("new request");
 
-    next();
-  } catch (error) {
-    console.log(error);
-  }
-};
+//       // Attach user information to the request object
+//       req.session.user.push({ id: userId, email: userEmail, token: userToken });
+//     }
+
+//     next();
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
 
 // Use the middleware in your routes
 //app.use(authenticateUser);
 
-const store = new MongoDBStore({
-  uri: process.env.DB_URI,
-  collection: "sessions",
-});
-app.use(
-  session({
-    secret: "secret string",
-    resave: false,
-    saveUninitialized: false,
-    store: store /* store session data in mongodb */,
-    cookie: {
-      sameSite: "none",
-      maxAge: 1000 * 60 * 60 * 2, // Set your desired session expiration time
-      /* can add cookie related info here */
-    },
-  })
-);
+// const store = new MongoDBStore({
+//   uri: process.env.DB_URI,
+//   collection: "sessions",
+// });
+// app.use(
+//   session({
+//     secret: "secret string",
+//     resave: false,
+//     saveUninitialized: false,
+//     store: store /* store session data in mongodb */,
+//     cookie: {
+//       sameSite: "none",
+//       maxAge: 1000 * 60 * 60 * 2, // Set your desired session expiration time
+//       /* can add cookie related info here */
+//     },
+//   })
+// );
 
-app.use((req, res, next) => {
-  console.log("request recieved: ", req.session);
-  if (!Array.isArray(req.session.user)) {
-    req.session.user = [];
-  }
-  next();
-});
+// app.use((req, res, next) => {
+//   console.log("request recieved: ", req.session);
+//   if (!Array.isArray(req.session.user)) {
+//     req.session.user = [];
+//   }
+//   next();
+// });
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());

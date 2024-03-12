@@ -78,25 +78,42 @@ app.post("/login", async (req, res) => {
         .status(404)
         .json({ Message: "No user found with provided information" });
     } else {
-      const tokenEmail = user.email + ":" + Date.now().toString(); // date.now() is for creating an UID
+      const tokenData = {
+        email: user.email,
+        id: user._id,
+        //expire: Date.now() / 1000 + 60 * 60 * 24,
+      };
+
+      //const tokenEmail = user.email + ":" + Date.now().toString(); // date.now() is for creating an UID
 
       const token = jwt.sign(
         {
           exp: Date.now() / 1000 + 60 * 60 * 24, // token should expire in 24 hours
-          data: tokenEmail,
+          data: tokenData,
         },
         process.env.SECRET
       );
-      console.log(req.session ? "session exists" : "session doesnt exist");
-      if (typeof req.session.user !== "undefined") {
-        // Example: Delete item with id 2
-        deleteItemById(req.session.user, user._id);
-      } else {
-        req.session.user = [];
-      }
 
-      req.session.user.push({ id: user._id, email: user.email, token: token });
-      console.log(req.session.user);
+      console.log("created cookie: ", token);
+
+      res.cookie("auth-token", token, {
+        httpOnly: true,
+        secure: true,
+        domain: "localhost",
+        path: "/",
+        sameSite: "none",
+      });
+
+      // console.log(req.session ? "session exists" : "session doesnt exist");
+      // if (typeof req.session.user !== "undefined") {
+      //   // Example: Delete item with id 2
+      //   deleteItemById(req.session.user, user._id);
+      // } else {
+      //   req.session.user = [];
+      // }
+
+      // req.session.user.push({ id: user._id, email: user.email, token: token });
+      // console.log(req.session.user);
 
       // if (!Array.isArray(req.session.user)) {
       //   req.session.user = [];
@@ -118,9 +135,18 @@ app.post("/login", async (req, res) => {
       //   id: user._id,
       // });
 
-      await req.session.save();
+      //await req.session.save();
 
-      res.header("auth-token", token).json({
+      // res.header("auth-token", token).json({
+      //   error: null,
+      //   data: {
+      //     Status: 200,
+      //     Message: "Token signed successfully",
+      //     data: token,
+      //   },
+      // });
+
+      res.status(200).json({
         error: null,
         data: {
           Status: 200,
@@ -128,8 +154,6 @@ app.post("/login", async (req, res) => {
           data: token,
         },
       });
-
-      //res.status(200).json({ Message: "User Logged in" });
     }
   } catch (error) {
     console.log(error);

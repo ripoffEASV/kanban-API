@@ -1,89 +1,112 @@
 const express = require("express");
 const app = express();
 const orgs = require("../Models/OrganizationModel");
+const users = require("../Models/userModel");
+const mongoose = require("mongoose");
 
 const verifyToken = require("../auth");
 
-app.post("/addNewOrganization", async (req, res) => {
+app.post("/addNewOrganization", verifyToken, async (req, res) => {
   try {
     let data = req.body;
-    const token = req.headers["authorization"].split(" ")[1];
 
-    let isMatch = false;
-    let userID;
-
-    req.session.user.forEach((val) => {
-      console.log(val);
-      if (val.token == token) {
-        isMatch = true;
-        userID = val.id;
-        console.log("match");
-      }
-    });
-
-    if (isMatch) {
-      console.log("there was a match??");
-      data.createdByID = userID;
-
-      await orgs
-        .insertMany(data)
-        .then((data) => {
-          res.status(200).json({ message: "Organization created" });
-        })
-        .catch((err) => {
-          res.status(500).send({
-            message: "There was an error adding a new Organization",
-          });
-        });
-    } else {
-      res.status(404).send({
-        message: "No authorized users found",
-      });
+    console.log("there was a match??");
+    data.createdByID = req.user.data.id;
+    if (data.ownerID === "") {
+      data.ownerID = req.user.data.id;
     }
+
+    await orgs
+      .insertMany(data)
+      .then((data) => {
+        res.status(200).json({ message: "Organization created" });
+      })
+      .catch((err) => {
+        res.status(500).send({
+          message: "There was an error adding a new Organization",
+        });
+      });
   } catch (error) {
     console.log(error.message);
   }
 });
 
-app.get("/getOrganizationsFromID/:token", async (req, res) => {
+app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
   try {
-    console.log("running");
-    const token = req.params.token;
-    console.log(token.toString());
-    //const token = req.headers["authorization"].split(" ")[1];
-
-    let userID;
-    let matchFound = false;
-
-    // if (!Array.isArray(req.session.user)) {
-    //   req.session.user = [];
-    // }
-
-    console.log(req.user ? req.session.user.token : "no token");
-
-    req.session.user.forEach((val, index) => {
-      if (val.token == token) {
-        userID = val.id;
-        matchFound = true;
-      }
-    });
-
-    if (!matchFound) {
-      return res.status(404).json({ message: "no match" });
-    }
-
-    console.log("userID: ", userID);
-
     const foundOrgs = await orgs.find({
-      createdByID: userID,
-      $or: [{ ownerID: userID }, { "orgMembers.userID": userID }],
+      $or: [
+        { createdByID: req.user.data.id },
+        { ownerID: req.user.data.id },
+        { "orgMembers.userID": req.user.data.id },
+      ],
     });
-
-    console.log("orgs: ", foundOrgs);
+    console.log(foundOrgs);
 
     res.status(200).json({ organizations: foundOrgs });
   } catch (error) {
     console.error("Error in getOrganizationsFromID route:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+app.get("/getSpecificOrg/:orgID", verifyToken, async (req, res) => {
+  try {
+    console.log("get specific org: ", req.params.orgID);
+    const organizationDetails = await orgs.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.params.orgID), // Replace with your orgID
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdByID",
+          foreignField: "_id",
+          as: "createdByUser",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: { ownerId: "$ownerID" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", { $toObjectId: "$$ownerId" }] },
+              },
+            },
+            {
+              $project: { _id: 0, password: 0 }, // Exclude the password field
+            },
+          ],
+          as: "owner",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: { createdById: "$createdByID" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", { $toObjectId: "$$createdById" }] },
+              },
+            },
+            {
+              $project: { _id: 0, password: 0 }, // Exclude the password field
+            },
+          ],
+          as: "createdByUser",
+        },
+      },
+    ]);
+
+    console.log("organizationDetails: ", organizationDetails);
+
+    res.status(200).json({ message: "found org", org: organizationDetails });
+  } catch (error) {
+    console.error("Error in getSpecificOrg route:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
