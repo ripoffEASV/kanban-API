@@ -56,15 +56,7 @@ app.get("/getSpecificOrg/:orgID", verifyToken, async (req, res) => {
     const organizationDetails = await orgs.aggregate([
       {
         $match: {
-          _id: new mongoose.Types.ObjectId(req.params.orgID), // Replace with your orgID
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "createdByID",
-          foreignField: "_id",
-          as: "createdByUser",
+          _id: new mongoose.Types.ObjectId(req.params.orgID),
         },
       },
       {
@@ -99,6 +91,34 @@ app.get("/getSpecificOrg/:orgID", verifyToken, async (req, res) => {
             },
           ],
           as: "createdByUser",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: { orgMemberUserIDs: "$orgMembers.userID" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: [
+                    "$_id",
+                    {
+                      $map: {
+                        input: "$$orgMemberUserIDs",
+                        as: "id",
+                        in: { $toObjectId: "$$id" },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $project: { password: 0 }, // Exclude the password field
+            },
+          ],
+          as: "orgUsers",
         },
       },
     ]);
