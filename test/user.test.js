@@ -55,8 +55,8 @@ describe('User workflow tests', () => {
                             expect(createdByID).to.be.a('string').that.is.not.empty
                             expect(ownerID).to.be.a('string').that.is.not.empty
                             expect(createdByID).to.be.equal(ownerID)
-                            createdOrgId = res.body.org
-                            console.log(createdOrgId, loginToken);
+                            /* createdOrgId = res.body.org
+                            console.log(createdOrgId, loginToken); */
                             done();
                         });
                     });
