@@ -10,17 +10,16 @@ app.post("/addNewOrganization", verifyToken, async (req, res) => {
   try {
     let data = req.body;
 
-    console.log("there was a match??");
-    console.log(data);
-    data.createdByID = req.user.data?.id;
+    data.createdByID = req.user.id;
+
     if (!data.ownerID) {
-      data.ownerID = req.user.data.id;
+      data.ownerID = req.user.id;
     }
 
     await orgs
       .insertMany(data)
-      .then((data) => {
-        res.status(200).json({ message: "Organization created" });
+      .then((result) => {
+        res.status(200).json({ message: "Organization created", org: result });
       })
       .catch((err) => {
         res.status(500).send({

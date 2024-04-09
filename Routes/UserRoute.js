@@ -104,9 +104,9 @@ app.post("/login", async (req, res) => {
 
   const userFound = await user.findOne({ 
     $or: [
-      { email: data.emailOrUsername },
-      { username: data.emailOrUsername }
-    ] 
+      { email: { $regex: new RegExp('^' + data.emailOrUsername + '$', 'i') } },
+      { username: { $regex: new RegExp('^' + data.emailOrUsername + '$', 'i') } }
+    ]
   });
 
   const loginDetailsNotMatchingString = 'Username/email and password does not match';

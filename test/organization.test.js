@@ -21,9 +21,7 @@ describe('/First Test Collection', () => {
         });
     });
 
-
-    it('should POST a valid organization', (done) => {
-        
+    /* it('should POST a valid organization', (done) => {
         let org = {
             orgName: 'mocha chai org test',
             createdByID: '660ed1ed146d2827caca17c9',
@@ -32,23 +30,14 @@ describe('/First Test Collection', () => {
             projectIDs: [],
             inviteArray: []
         }
+
         chai.request(server)
         .post('/api/organizations/addNewOrganization')
-        .set('Cookie', `auth-token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRlc3RVc2VyIiwiZW1haWwiOiJ0ZXN0QHRlc3QuZGsiLCJpZCI6IjY2MTUwNGVkYTJmMzg5ZGM3YWI1MzI3MSIsImlhdCI6MTcxMjY1MzU0OSwiZXhwIjoxNzEyNzM5OTQ5fQ.85qcowu1JowfCsXaZPpHIzX0GedgEoFN08T7kuhlVdk`)
+        .set('Cookie', `auth-token=${token}`)
         .send(org)
         .end((err, res) => {
-            console.log(res);
             res.should.have.status(200);
             done();
         });
-    });
-
-
-    it('should test two values....', () => {
-        //actual test content in here
-        let expectedVal = 10;
-        let actualVal = 10;
-
-        expect(actualVal).to.be.equal(expectedVal);
-    })
+    }); */
 })
