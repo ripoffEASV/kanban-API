@@ -11,8 +11,9 @@ app.post("/addNewOrganization", verifyToken, async (req, res) => {
     let data = req.body;
 
     console.log("there was a match??");
-    data.createdByID = req.user.data.id;
-    if (data.ownerID === "") {
+    console.log(data);
+    data.createdByID = req.user.data?.id;
+    if (!data.ownerID) {
       data.ownerID = req.user.data.id;
     }
 
