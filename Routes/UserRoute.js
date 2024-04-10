@@ -92,7 +92,7 @@ app.get("/logout/:token", async (req, res) => {
 
   res.status(200).json({ message: "successfully logged out" });
 });
-
+ 
 app.post("/login", async (req, res) => {
   const data = req.body;
 
