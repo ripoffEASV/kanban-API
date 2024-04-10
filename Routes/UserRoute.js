@@ -1,27 +1,55 @@
+const { registerValidation, loginValidation } = require("../validation");
 const express = require("express");
 const app = express();
-const users = require("../Models/userModel");
+const user = require("../Models/userModel");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 const verifyToken = require("../auth");
 
-app.post("/addUser", async (req, res) => {
+app.post("/register", async (req, res) => {
   const data = req.body;
-  users
-    .insertMany(data)
-    .then((data) => {
-      res.status(200).send("user added");
-    })
-    .catch((err) => {
-      res.status(500).send({
-        title: "There was an error adding a new user",
-        message: err.message,
-      });
+
+  const { error } = registerValidation(data);
+
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const emailExists = await user.findOne({ email: data.email });
+    if (emailExists) { 
+        return res.status(400).json({ error: "Email already exists"});
+    }
+
+    const usernameExists = await user.findOne({ username: data.username });
+    if (usernameExists) {
+        return res.status(400).json({ error: "Username already exists"});
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password = await bcrypt.hash(data.password, salt);
+
+    const userColor = generateRandomHexColor();
+
+    const userObj = new user({
+        username: data.username,
+        email: data.email,
+        fName: data.fName,
+        lName: data.lName,
+        password,
+        color: userColor
     });
+
+    try {
+        const savedUser = await userObj.save();
+        res.json({ error: null, userID: savedUser._id });
+    } catch (error) {
+        res.status(400).json({error});
+    }
 });
 
 app.get("/", (req, res) => {
-  users
+  user
     .find({})
     .then((data) => {
       console.log("test: ", data);
@@ -36,7 +64,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/findByEmail/:email", (req, res) => {
-  users
+  user
     .findOne({ Email: req.params.email })
     .then((data) => {
       console.log("test: ", data);
@@ -66,35 +94,41 @@ app.get("/logout/:token", async (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  try {
-    const data = req.body;
+  const data = req.body;
 
-    const user = await users.findOne({
-      email: data.email,
-      password: data.password,
-    });
-    if (!user) {
-      res
-        .status(404)
-        .json({ Message: "No user found with provided information" });
-    } else {
-      const tokenData = {
-        email: user.email,
-        id: user._id,
-        //expire: Date.now() / 1000 + 60 * 60 * 24,
-      };
+  const { error } = loginValidation(data);
 
-      //const tokenEmail = user.email + ":" + Date.now().toString(); // date.now() is for creating an UID
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    }
 
-      const token = jwt.sign(
+  const userFound = await user.findOne({ 
+    $or: [
+      { email: { $regex: new RegExp('^' + data.emailOrUsername + '$', 'i') } },
+      { username: { $regex: new RegExp('^' + data.emailOrUsername + '$', 'i') } }
+    ]
+  });
+
+  const loginDetailsNotMatchingString = 'Username/email and password does not match';
+
+    if (!userFound) { 
+        return res.status(400).json({ error: loginDetailsNotMatchingString});
+    }
+
+    const validPassword = await bcrypt.compare(data.password, userFound.password);
+    if (!validPassword) { 
+        return res.status(400).json({ error: loginDetailsNotMatchingString});
+    }
+
+    const token = jwt.sign(
         {
-          exp: Date.now() / 1000 + 60 * 60 * 24, // token should expire in 24 hours
-          data: tokenData,
+            username: userFound.username,
+            email: userFound.email,
+            id: userFound._id
         },
-        process.env.SECRET
-      );
-
-      console.log("created cookie: ", token);
+        process.env.SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN }
+        );
 
       res.cookie("auth-token", token, {
         httpOnly: true,
@@ -104,60 +138,10 @@ app.post("/login", async (req, res) => {
         sameSite: "none",
       });
 
-      // console.log(req.session ? "session exists" : "session doesnt exist");
-      // if (typeof req.session.user !== "undefined") {
-      //   // Example: Delete item with id 2
-      //   deleteItemById(req.session.user, user._id);
-      // } else {
-      //   req.session.user = [];
-      // }
-
-      // req.session.user.push({ id: user._id, email: user.email, token: token });
-      // console.log(req.session.user);
-
-      // if (!Array.isArray(req.session.user)) {
-      //   req.session.user = [];
-      // }
-      // if (req.session.length) {
-      //   //Delete stored user if logging in twice
-
-      //   req.session.user.forEach((element, index) => {
-      //     if (element.email == data.email) {
-      //       req.session.user.splice(index, 1);
-      //     }
-      //   });
-      // }
-
-      // //add info to session storage
-      // req.session.user.push({
-      //   email: user.email,
-      //   token: token,
-      //   id: user._id,
-      // });
-
-      //await req.session.save();
-
-      // res.header("auth-token", token).json({
-      //   error: null,
-      //   data: {
-      //     Status: 200,
-      //     Message: "Token signed successfully",
-      //     data: token,
-      //   },
-      // });
-
-      res.status(200).json({
+        res.header("auth-token", token).json({
         error: null,
-        data: {
-          Status: 200,
-          Message: "Token signed successfully",
-          data: token,
-        },
-      });
-    }
-  } catch (error) {
-    console.log(error);
-  }
+        data: { token }
+    })
 });
 
 // Function to find and delete an item from the array
@@ -169,5 +153,11 @@ const deleteItemById = (array, itemId) => {
     array.splice(index, 1);
   }
 };
+
+const generateRandomHexColor = () => {
+    const hexString = Math.floor(Math.random() * 16777215).toString(16);
+    const paddedHexString = hexString.padStart(6, '0');
+    return "#" + paddedHexString;
+}
 
 module.exports = app;

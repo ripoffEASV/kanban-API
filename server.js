@@ -1,7 +1,13 @@
 const mongoose = require("mongoose");
 require("dotenv-flow").config();
 
-mongoose.connect(process.env.DB_URI);
+mongoose.set('strictQuery', false);
+mongoose.connect(process.env.DB_URI,
+    {
+        useUnifiedTopology: true,
+        useNewUrlParser: true
+    }
+).catch(error => console.log("Error connecting to MongoDB:" + error));
 const express = require("express");
 const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
@@ -18,60 +24,6 @@ app.use(
 );
 
 app.use(cookieParser());
-
-// const authenticateUser = (req, res, next) => {
-//   try {
-//     if (
-//       req.session &&
-//       req.session.id &&
-//       req.session.email &&
-//       req.session.token
-//     ) {
-//       // If authenticated, extract user information from session
-//       const userId = req.session.id;
-//       const userEmail = req.session.email;
-//       const userToken = req.session.token;
-
-//       console.log("new request");
-
-//       // Attach user information to the request object
-//       req.session.user.push({ id: userId, email: userEmail, token: userToken });
-//     }
-
-//     next();
-//   } catch (error) {
-//     console.log(error);
-//   }
-// };
-
-// Use the middleware in your routes
-//app.use(authenticateUser);
-
-// const store = new MongoDBStore({
-//   uri: process.env.DB_URI,
-//   collection: "sessions",
-// });
-// app.use(
-//   session({
-//     secret: "secret string",
-//     resave: false,
-//     saveUninitialized: false,
-//     store: store /* store session data in mongodb */,
-//     cookie: {
-//       sameSite: "none",
-//       maxAge: 1000 * 60 * 60 * 2, // Set your desired session expiration time
-//       /* can add cookie related info here */
-//     },
-//   })
-// );
-
-// app.use((req, res, next) => {
-//   console.log("request recieved: ", req.session);
-//   if (!Array.isArray(req.session.user)) {
-//     req.session.user = [];
-//   }
-//   next();
-// });
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -99,5 +51,10 @@ app.use("/api/users", userRoute);
 
 app.listen(PORT, async (req, res) => {
   console.log("Server Listening on PORT:", PORT);
-  //await isConnected();
 });
+
+app.get('/api/health-check', (req, res) => {
+  res.status(200).send({message: 'Health check was successful!'});
+})
+
+module.exports = app;
