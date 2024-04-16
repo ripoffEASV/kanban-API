@@ -44,7 +44,7 @@ const taskRoute = require("./Routes/TaskRoute");
 const userRoute = require("./Routes/UserRoute");
 
 app.use("/api/organizations", organizationRoute);
-// app.use(projectRoute);
+ app.use("/api/projects",projectRoute);
 // app.use(stateRoute);
 // app.use(taskRoute);
 app.use("/api/users", userRoute);
