@@ -54,7 +54,7 @@ app.listen(PORT, async (req, res) => {
 });
 
 app.get('/api/health-check', (req, res) => {
-  res.status(200).send({message: 'Health check was successful!'});
+  res.status(200).send({message: 'Health check was successful!9999'});
 })
 
 module.exports = app;

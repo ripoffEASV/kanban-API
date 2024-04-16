@@ -34,3 +34,16 @@ jobs:
           DB_URI: ${{ secrets.DB_URI }}  
           SECRET: ${{ secrets.SECRET }}  
           JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}  
+
+
+  deploy:
+    name: Deploy
+    needs: [test]
+    runs-on: ubuntu-latest
+
+    steps: 
+      - name: Deploy to production
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.SERVICE_ID }}
+          api-key: rnd_${{ secrets.KANBANAPI  }}
