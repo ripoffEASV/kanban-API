@@ -6,13 +6,21 @@ const orgs = require("../Models/OrganizationModel");
 const mongoose = require("mongoose");
 const verifyToken = require("../auth");
 
-app.post("/addNewProject", verifyToken, async (req, res) => {
+app.post("/addNewProject", async (req, res) => {
   try {
     let data = req.body;
     console.log(data);
 
     let stateIDArray = [];
     let userIDArray = [];
+
+    if (data.projectMembers.length <= 0) {
+      throw new Error("Project must have at least a single member");
+    }
+
+    if (data.projectBoards.length <= 0) {
+      throw new Error("Project must have at least a single board");
+    }
 
     await Promise.all(
       data.projectMembers.map(async (element) => {
@@ -33,7 +41,6 @@ app.post("/addNewProject", verifyToken, async (req, res) => {
           stateName: element.title,
         });
         const resultID = stateID._id;
-        console.log(element.title, resultID);
         stateIDArray.push(resultID); // Push just the ID, not in an object
       })
     );
@@ -43,11 +50,14 @@ app.post("/addNewProject", verifyToken, async (req, res) => {
       { projectStateIDs: stateIDArray }
     );
 
-    res.status(209).json({ message: "Project added successfully" });
+    res.status(200).json({
+      message: "Project added successfully",
+      projectID: newProject._id,
+    });
   } catch (error) {
     res.status(500).json({
-      Title: "Something went wrong with adding a new project",
-      Message: error.message,
+      title: "Something went wrong with adding a new project",
+      message: error.message,
     });
   }
 });
@@ -55,7 +65,6 @@ app.post("/addNewProject", verifyToken, async (req, res) => {
 app.get("/getSpecificProject/:projectID", async (req, res) => {
   try {
     const projectID = req.params.projectID;
-    console.log(projectID);
     projects
       .aggregate([
         {
@@ -149,9 +158,9 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
           },
         },
       ])
-      .then((projects) => {
-        console.log(projects);
-        res.send(projects);
+      .then((result) => {
+        console.log(result);
+        res.status(200).json({ project: result });
       })
       .catch((error) => {
         console.log(error);
@@ -220,9 +229,9 @@ app.get("/getProjects/:orgID", async (req, res) => {
           },
         },
       ])
-      .then((projects) => {
-        console.log(projects);
-        res.send(projects);
+      .then((results) => {
+        console.log(results);
+        res.status(200).json({ project: results });
       })
       .catch((err) => {
         res.send(err);

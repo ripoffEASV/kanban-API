@@ -1,33 +1,39 @@
-process.env.NODE_ENV = 'test';
+process.env.NODE_ENV = "test";
 
-const chai = require('chai');
-const chaiHttp = require('chai-http');
+const chai = require("chai");
+const chaiHttp = require("chai-http");
 chai.use(chaiHttp);
 
-const organization = require('../Models/OrganizationModel');
-const user = require('../Models/userModel');
-const server = require('../server');
+const organization = require("../Models/OrganizationModel");
+const user = require("../Models/userModel");
+const project = require("../Models/ProjectModel");
+const server = require("../server");
 
 before(async () => {
-    await organization.deleteMany({});
-    await user.deleteMany({});
-    
-    // Create a user
-    let newUser = {
-        username: 'testUser',
-        email: 'test@test.dk',
-        fName: 'Test',
-        lName: 'User',
-        password: 'ThisIsATestUserForE2ETesting',
-    }
+  await organization.deleteMany({});
+  await user.deleteMany({});
+  await project.deleteMany({});
 
-    await chai.request(server).post('/api/users/register').send(newUser);
+  // Create a user
+  let newUser = {
+    username: "testUser",
+    email: "test@test.dk",
+    fName: "Test",
+    lName: "User",
+    password: "ThisIsATestUserForE2ETesting",
+  };
 
-    const res = await chai.request(server).post('/api/users/login').send({ emailOrUsername: newUser.username, password: newUser.password });
-    process.env.AUTH_TOKEN = res.body.data.token;
+  await chai.request(server).post("/api/users/register").send(newUser);
+
+  const res = await chai
+    .request(server)
+    .post("/api/users/login")
+    .send({ emailOrUsername: newUser.username, password: newUser.password });
+  process.env.AUTH_TOKEN = res.body.data.token;
 });
 
 after(async () => {
-    await organization.deleteMany({});
-    await user.deleteMany({});
+  await organization.deleteMany({});
+  await user.deleteMany({});
+  await project.deleteMany({});
 });
