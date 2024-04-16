@@ -20,24 +20,4 @@ describe('/First Test Collection', () => {
             done();
         });
     });
-
-    /* it('should POST a valid organization', (done) => {
-        let org = {
-            orgName: 'mocha chai org test',
-            createdByID: '660ed1ed146d2827caca17c9',
-            ownerID: '660ed1ed146d2827caca17c9',
-            orgMembers: [],
-            projectIDs: [],
-            inviteArray: []
-        }
-
-        chai.request(server)
-        .post('/api/organizations/addNewOrganization')
-        .set('Cookie', `auth-token=${token}`)
-        .send(org)
-        .end((err, res) => {
-            res.should.have.status(200);
-            done();
-        });
-    }); */
 })
