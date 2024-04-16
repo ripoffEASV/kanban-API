@@ -1,0 +1,139 @@
+openapi: 3.0.0
+info:
+  title: MEN REST API
+  description: MongoDB ExpressJS NodeJS REST API
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000/api/
+    description: Localhost development server
+components:
+  securitySchemes:
+    securitySchemes:
+      bearerAuth: # arbitrary name for the security scheme
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+
+  schemas:
+    OrganizationModel:
+      type: object
+      properties:
+        orgName:
+          type: string
+          example: "Acme Corp"
+        createdByID:
+          type: string
+          example: "F-150"
+        ownerID:
+          type: string
+          example: "2020"
+        orgMembers:
+          type: array
+          example: ["1", "2"]
+        projectIDs:
+          type: array
+          example: ["1", "2"]
+        inviteArray:
+          type: array
+          example: ["1", "2"]
+
+    ProjectModel:
+      type: object
+      properties:
+        projectName:
+          type: string
+        projectStateIDs:
+          type: array
+        members:
+          type: array
+        orgID:
+          type: string
+
+    StateModel:
+      type: object
+      properties:
+        stateName:
+          type: string
+        position:
+          type: number
+
+    TaskModel:
+      type: object
+      properties:
+        stateID:
+          type: string
+        taskTitle:
+          type: string
+        taskDescription:
+          type: string
+        hoursExpected:
+          type: string
+        hoursSpent:
+          type: string
+        labelColor:
+          type: string
+        labelText:
+          type: string
+        parentTaskID:
+          type: string
+        assignedToID:
+          type: array
+        createdByID:
+          type: string
+
+    userModel:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        fName:
+          type: string
+        lName:
+          type: string
+        password:
+          type: string
+        color:
+          type: string
+
+paths:
+  /addNewOrganization:
+    post:
+      tags:
+        - organization
+      summary: Adds a new organization
+      description: when a user fills the form and sends the request, the function updates the backend with the specified information and creates a new organization, which the user then will be a part of.
+
+      requestBody:
+        description: reads parameters from the request body and adds that to the database
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationModel"
+        required: true
+
+      response:
+        200:
+          description: organization has been created successfully
+          
+
+  /getOrganizationsFromID:
+    get:
+      tags:
+        - organization
+      summary:
+      description:
+      response:
+        200:
+
+  /getSpecificOrg:
+    get:
+      tags:
+        - organization
+      summary:
+      description:
+      response:
+        200:
+
+  
