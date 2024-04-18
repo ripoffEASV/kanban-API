@@ -34,14 +34,14 @@ app.post("/addNewOrganization", verifyToken, async (req, res) => {
 
 app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
   try {
+
     const foundOrgs = await orgs.find({
       $or: [
-        { createdByID: req.user.data.id },
-        { ownerID: req.user.data.id },
-        { "orgMembers.userID": req.user.data.id },
+        { createdByID: req.user.email },
+        { ownerID: req.user.email },
+        { "orgMembers.userID": req.user.id },
       ],
     });
-    console.log(foundOrgs);
 
     res.status(200).json({ organizations: foundOrgs });
   } catch (error) {
@@ -50,7 +50,7 @@ app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
   }
 });
 
-app.get("/getSpecificOrg/:orgID", verifyToken, async (req, res) => {
+app.get("/getSpecificOrg/:orgID", async (req, res) => {
   try {
     console.log("get specific org: ", req.params.orgID);
     const organizationDetails = await orgs.aggregate([
@@ -125,7 +125,9 @@ app.get("/getSpecificOrg/:orgID", verifyToken, async (req, res) => {
 
     console.log("organizationDetails: ", organizationDetails);
 
-    res.status(200).json({ message: "found org", org: organizationDetails });
+    res
+      .status(200)
+      .json({ message: "available Organization", org: organizationDetails });
   } catch (error) {
     console.error("Error in getSpecificOrg route:", error);
     res.status(500).json({ message: "Internal Server Error" });
