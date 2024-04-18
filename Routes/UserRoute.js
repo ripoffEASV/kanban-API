@@ -125,6 +125,7 @@ app.post("/login", async (req, res) => {
     //   ],
     // });
 
+    //  Regex didnt work for me when trying to log in
     const userFound = await user.findOne({
       $or: [
         {

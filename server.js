@@ -61,7 +61,7 @@ const swaggerDefinition = yamlJS.load("./swagger.yaml");
 app.use("/api/docs", swaggerUI.serve, swaggerUI.setup(swaggerDefinition));
 
 app.get("/api/health-check", (req, res) => {
-  res.status(200).send({ message: "Health check was successful!9999" });
+  res.status(200).send({ message: "Health check was successful!" });
 });
 
 module.exports = app;
