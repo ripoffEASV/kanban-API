@@ -170,6 +170,7 @@ app.post("/login", async (req, res) => {
       path: "/",
       sameSite: "none",
     });
+    res.cookie("user", userFound._id);
 
     res.header("auth-token", token).json({
       error: null,

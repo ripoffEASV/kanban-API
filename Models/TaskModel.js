@@ -14,4 +14,4 @@ var taskSchema = new Schema({
   createdByID: { type: String },
 });
 
-module.export = mongoose.model("tasks", taskSchema);
+module.exports = mongoose.model("tasks", taskSchema);

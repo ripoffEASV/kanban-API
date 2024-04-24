@@ -81,19 +81,11 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
               {
                 $match: {
                   $expr: {
-                    $in: [
-                      { $toObjectId: "$_id" },
-                      {
-                        $map: {
-                          input: "$$projectStateIDs",
-                          as: "projectStateID",
-                          in: { $toObjectId: "$$projectStateID" },
-                        },
-                      },
-                    ],
+                    $in: ["$_id", "$$projectStateIDs"],
                   },
                 },
               },
+
               {
                 $project: {
                   stateName: 1,
@@ -107,9 +99,40 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
         {
           $lookup: {
             from: "tasks",
-            localField: "stateInfo._id",
-            foreignField: "stateID",
-            as: "tasks",
+            let: { stateIDs: "$stateInfo.stateID" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $in: [
+                      { $toObjectId: "$stateID" }, // Use stateID field to match
+                      {
+                        $map: {
+                          input: "$$stateIDs",
+                          as: "stateID",
+                          in: { $toObjectId: "$$stateID" },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+              {
+                $project: {
+                  stateID: 1,
+                  taskTitle: 1, // Include fields you want to retrieve
+                  taskDescription: 1,
+                  hoursExpected: 1,
+                  hoursSpent: 1,
+                  labelColor: 1,
+                  labelText: 1,
+                  assignedToID: 1,
+                  createdByID: 1,
+                  // Add more fields if needed
+                },
+              },
+            ],
+            as: "taskArray",
           },
         },
         {
@@ -155,7 +178,7 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
             orgID: 1,
             membersInfo: 1,
             stateInfo: 1,
-            tasks: 1,
+            taskArray: 1, // Rename tasks to taskInfo
           },
         },
       ])
@@ -165,6 +188,10 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
       })
       .catch((error) => {
         console.log(error);
+        res.status(500).json({
+          Title: "Something went wrong with getting specific project",
+          Message: error.message,
+        });
       });
   } catch (error) {
     res.status(500).json({
@@ -245,58 +272,47 @@ app.get("/getProjects/:orgID", async (req, res) => {
   }
 });
 
-app.post("/updateSingleProjectBoard", async (req, res) => {
+app.post("/updateSingleProjectBoard", verifyToken, async (req, res) => {
   try {
     const data = req.body;
     console.log(data);
 
-    const updatedState = await states.findOneAndUpdate(
-      { _id: data.stateID },
-      { stateName: data.stateName },
-      { new: true } // Return the updated document
+    let newTaskArray = [];
+
+    // Create tasks in parallel and collect their IDs
+    await Promise.all(
+      data.taskArray.map(async (element) => {
+        let task = await tasks.create({
+          createdByID: req.user.id,
+          stateID: data.stateID,
+          taskName: element.taskName,
+        });
+        newTaskArray.push(task._id); // Push just the ID
+      })
     );
 
+    // Find and update the state document
+    const updatedState = await states.findOneAndUpdate(
+      { _id: data.stateID },
+      { stateName: data.stateName, taskArray: newTaskArray },
+      { new: true }
+    );
+
+    // Check if the state was not found
     if (!updatedState) {
       console.log(`State with ID ${data.stateID} not found.`);
       return res.status(404).send("State not found");
     }
 
-    // Array to store information about each task
-    const taskInfo = [];
-
-    // Iterate over each task in the taskArray
-    for (const task of updatedState.taskArray) {
-      // Create a document for each task
-      const newTask = new tasks({
-        stateID: data.stateID,
-        taskTitle: task.taskName,
-        // Add other fields as needed
-      });
-
-      // Save the new task document to the database
-      await newTask.save();
-
-      // Add information about the task to the taskInfo array
-      taskInfo.push({
-        taskId: newTask._id, // Assuming MongoDB assigns an _id to each task
-        taskName: newTask.taskTitle,
-        // Add other fields as needed
-      });
-    }
-
-    // Update the state with information about each task
-    updatedState.taskInfo = taskInfo;
-    await updatedState.save();
-
+    // Log and send the updated state
     console.log(
       `State with ID ${data.stateID} updated successfully with task information:`
     );
     console.log(updatedState);
-
-    res.status(200).send(updatedState);
+    res.status(200).json(updatedState);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server error"); // Send 500 for any server error
+    res.status(500).send("Server error");
   }
 });
 
