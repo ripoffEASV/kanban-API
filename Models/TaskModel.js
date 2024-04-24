@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+var Schema = mongoose.Schema;
 
-const taskSchema = new Schema({
+var taskSchema = new Schema({
   stateID: { type: String },
   taskTitle: { type: String },
   taskDescription: { type: String },
@@ -14,4 +14,4 @@ const taskSchema = new Schema({
   createdByID: { type: String },
 });
 
-modoule.export = mongoose.Model("tasks", taskSchema);
+module.export = mongoose.model("tasks", taskSchema);

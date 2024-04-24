@@ -118,14 +118,18 @@ app.post("/login", async (req, res) => {
 
     // const userFound = await user.findOne({
     //   $or: [
-    //     { email: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") } },
     //     {
-    //       username: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") },
+    //       email: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") },
+    //     },
+    //     {
+    //       username: {
+    //         $regex: new RegExp("^" + data.emailOrUsername + "$", "i"),
+    //       },
     //     },
     //   ],
     // });
 
-    //  Regex didnt work for me when trying to log in
+    // Regex didnt work for me when trying to log in
     const userFound = await user.findOne({
       $or: [
         {

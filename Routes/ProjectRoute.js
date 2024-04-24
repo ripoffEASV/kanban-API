@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const projects = require("../Models/ProjectModel");
 const states = require("../Models/StateModel");
+const tasks = require("../Models/TaskModel");
 const orgs = require("../Models/OrganizationModel");
 const mongoose = require("mongoose");
 const verifyToken = require("../auth");
@@ -241,6 +242,61 @@ app.get("/getProjects/:orgID", async (req, res) => {
       Title: "Something went wrong with getting organization projects",
       Message: error.message,
     });
+  }
+});
+
+app.post("/updateSingleProjectBoard", async (req, res) => {
+  try {
+    const data = req.body;
+    console.log(data);
+
+    const updatedState = await states.findOneAndUpdate(
+      { _id: data.stateID },
+      { stateName: data.stateName },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedState) {
+      console.log(`State with ID ${data.stateID} not found.`);
+      return res.status(404).send("State not found");
+    }
+
+    // Array to store information about each task
+    const taskInfo = [];
+
+    // Iterate over each task in the taskArray
+    for (const task of updatedState.taskArray) {
+      // Create a document for each task
+      const newTask = new tasks({
+        stateID: data.stateID,
+        taskTitle: task.taskName,
+        // Add other fields as needed
+      });
+
+      // Save the new task document to the database
+      await newTask.save();
+
+      // Add information about the task to the taskInfo array
+      taskInfo.push({
+        taskId: newTask._id, // Assuming MongoDB assigns an _id to each task
+        taskName: newTask.taskTitle,
+        // Add other fields as needed
+      });
+    }
+
+    // Update the state with information about each task
+    updatedState.taskInfo = taskInfo;
+    await updatedState.save();
+
+    console.log(
+      `State with ID ${data.stateID} updated successfully with task information:`
+    );
+    console.log(updatedState);
+
+    res.status(200).send(updatedState);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server error"); // Send 500 for any server error
   }
 });
 
