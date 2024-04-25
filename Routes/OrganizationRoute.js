@@ -3,6 +3,7 @@ const app = express();
 const orgs = require("../Models/OrganizationModel");
 const user = require("../Models/userModel");
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
 
 const { verifyToken, verifyUserHasUpdatePrivilege } = require("../auth");
 
@@ -174,6 +175,40 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+app.get("/check-user-invites", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userEmail = decoded.email;
+
+    const invitedOrgs = await orgs.find({
+      inviteArray: { $in: [userEmail] }
+    });
+
+    const invitations = await Promise.all(invitedOrgs.map(async (inv) => {
+      const ownerDetails = await user.findById(inv.ownerID);
+      return {
+        id: inv._id,
+        orgName: inv.orgName,
+        owner: ownerDetails ? {
+          fName: ownerDetails.fName,
+          lName: ownerDetails.lName,
+          email: ownerDetails.email,
+          color: ownerDetails.color
+        } : null
+      };
+    }));
+
+    return res.status(200).json(invitations);
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+})
 
 
 
