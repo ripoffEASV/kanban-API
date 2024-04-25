@@ -4,7 +4,7 @@ const orgs = require("../Models/OrganizationModel");
 const users = require("../Models/userModel");
 const mongoose = require("mongoose");
 
-const verifyToken = require("../auth");
+const { verifyToken, verifyUserHasUpdatePrivilege } = require("../auth");
 
 app.post("/addNewOrganization", verifyToken, async (req, res) => {
   try {
@@ -32,9 +32,33 @@ app.post("/addNewOrganization", verifyToken, async (req, res) => {
   }
 });
 
+app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req, res) => {
+  const { orgID } = req.params;
+  const data = req.body;
+  try {
+    if (!mongoose.Types.ObjectId.isValid(orgID)) {
+      return res.status(400).send("Invalid organization ID.");
+    }
+
+    const updatedOrg = await orgs.findByIdAndUpdate(
+      orgID,
+      { $set: data },
+      { new: true, runValidators: true } // options to return the updated document and run schema validators
+    );
+
+    if (!updatedOrg) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    res.status(200).json({ message: "Organization updated successfully", organization: updatedOrg });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to update the organization", error: error.message });
+  }
+})
+
 app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
   try {
-    console.log(req.user);
 
     const foundOrgs = await orgs.find({
       $or: [
@@ -43,9 +67,6 @@ app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
         { "orgMembers.userID": req.user.id },
       ],
     });
-
-
-    console.log(foundOrgs);
 
     res.status(200).json({ organizations: foundOrgs });
   } catch (error) {
@@ -137,5 +158,7 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+
 
 module.exports = app;
