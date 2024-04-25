@@ -29,7 +29,17 @@ before(async () => {
     .request(server)
     .post("/api/users/login")
     .send({ emailOrUsername: newUser.username, password: newUser.password });
-  process.env.AUTH_TOKEN = res.body.data.token;
+
+
+    const authTokenCookie = res.headers['set-cookie']
+      .find(cookie => cookie.startsWith('auth-token='));
+
+    if (authTokenCookie) {
+      const tokenValue = authTokenCookie.split(';')[0].split('=')[1];
+      process.env.AUTH_TOKEN = tokenValue;
+    } else {
+      throw new Error('Auth token cookie was not found');
+    }
 });
 
 after(async () => {
