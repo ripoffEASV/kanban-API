@@ -210,6 +210,44 @@ app.get("/check-user-invites", verifyToken, async (req, res) => {
   }
 })
 
+app.get("/accept-org-inv/:orgID", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  const { orgID } = req.params;
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userEmail = decoded.email;
+    const org = await orgs.findById(orgID);
+    if (!org) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    if (!org.inviteArray.includes(userEmail)) {
+      return res.status(400).send("Invite not found in the organization.");
+    }
+
+    const userObj = await user.findOne({ email: userEmail });
+    if (!userObj) {
+      return res.status(404).send("User not found.");
+    }
+
+    org.inviteArray = org.inviteArray.filter(email => email !== userEmail);
+
+    const newMember = { userID: userObj._id.toString() };
+    org.orgMembers.push(newMember);
+
+    await org.save();
+
+    return res.status(200).json({ message: "Invitation accepted." });
+
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err });
+  }
+})
+
 
 
 module.exports = app;
