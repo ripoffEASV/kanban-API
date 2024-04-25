@@ -285,7 +285,7 @@ app.post("/updateSingleProjectBoard", verifyToken, async (req, res) => {
         let task = await tasks.create({
           createdByID: req.user.id,
           stateID: data.stateID,
-          taskName: element.taskName,
+          taskTitle: element.taskTitle,
         });
         newTaskArray.push(task._id); // Push just the ID
       })
