@@ -91,19 +91,16 @@ app.get("/findByEmail/:email", async (req, res) => {
   }
 });
 
-app.get("/logout/:token", async (req, res) => {
-  const token = req.params.token.split(" ")[1];
-
-  //Delete stored user if logging in twice
-  req.session.user.forEach((element, index) => {
-    console.log(element, index);
-    if (element.token == token) {
-      console.log("match");
-      //req.session.user.splice(index, 1);
-    }
+app.get('/logout', (req, res) => {
+  res.cookie('auth-token', '', {
+    httpOnly: true,
+    secure: true,
+    domain: 'localhost',
+    path: '/',
+    sameSite: 'none',
+    expires: new Date(0) // Set the expiration to a past date
   });
-
-  res.status(200).json({ message: "successfully logged out" });
+  res.send('Logged out');
 });
 
 app.post("/login", async (req, res) => {
@@ -116,23 +113,14 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    // const userFound = await user.findOne({
-    //   $or: [
-    //     { email: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") } },
-    //     {
-    //       username: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") },
-    //     },
-    //   ],
-    // });
-
-    //  Regex didnt work for me when trying to log in
+    // do not check for case sensitivity for login username/email field
     const userFound = await user.findOne({
       $or: [
-        {
-          email: data.emailOrUsername,
+        { 
+          email: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") }
         },
         {
-          username: data.emailOrUsername,
+          username: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") },
         },
       ],
     });
@@ -166,10 +154,11 @@ app.post("/login", async (req, res) => {
       path: "/",
       sameSite: "none",
     });
+    res.cookie("user", userFound._id);
 
     res.header("auth-token", token).json({
       error: null,
-      data: { token },
+      data: { userID: userFound._id },
     });
   } catch (error) {
     res.status(500).json({

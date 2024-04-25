@@ -34,14 +34,18 @@ app.post("/addNewOrganization", verifyToken, async (req, res) => {
 
 app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
   try {
+    console.log(req.user);
 
     const foundOrgs = await orgs.find({
       $or: [
-        { createdByID: req.user.email },
-        { ownerID: req.user.email },
+        { createdByID: req.user.id },
+        { ownerID: req.user.id },
         { "orgMembers.userID": req.user.id },
       ],
     });
+
+
+    console.log(foundOrgs);
 
     res.status(200).json({ organizations: foundOrgs });
   } catch (error) {
