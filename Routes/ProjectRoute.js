@@ -10,7 +10,6 @@ const verifyToken = require("../auth");
 app.post("/addNewProject", async (req, res) => {
   try {
     let data = req.body;
-    console.log(data);
 
     let stateIDArray = [];
     let userIDArray = [];
@@ -183,7 +182,6 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
         },
       ])
       .then((result) => {
-        console.log(result);
         res.status(200).json({ project: result });
       })
       .catch((error) => {
@@ -258,7 +256,6 @@ app.get("/getProjects/:orgID", async (req, res) => {
         },
       ])
       .then((results) => {
-        console.log(results);
         res.status(200).json({ project: results });
       })
       .catch((err) => {
@@ -275,7 +272,6 @@ app.get("/getProjects/:orgID", async (req, res) => {
 app.post("/updateSingleProjectBoard", verifyToken, async (req, res) => {
   try {
     const data = req.body;
-    console.log(data);
 
     let newTaskArray = [];
 
@@ -300,15 +296,10 @@ app.post("/updateSingleProjectBoard", verifyToken, async (req, res) => {
 
     // Check if the state was not found
     if (!updatedState) {
-      console.log(`State with ID ${data.stateID} not found.`);
       return res.status(404).send("State not found");
     }
 
     // Log and send the updated state
-    console.log(
-      `State with ID ${data.stateID} updated successfully with task information:`
-    );
-    console.log(updatedState);
     res.status(200).json(updatedState);
   } catch (error) {
     console.error(error.message);

@@ -30,6 +30,7 @@ describe('/First Test Collection', () => {
             projectIDs: [],
             inviteArray: []
         }
+        
 
         chai.request(server)
             .post('/api/organizations/addNewOrganization')

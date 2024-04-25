@@ -6,6 +6,7 @@ chai.use(chaiHttp);
 
 describe('User workflow tests', () => {
     it('should create user and login', (done) => { 
+
         let newUser = {
             username: 'testUser2',
             email: 'test2@test.dk',
@@ -31,7 +32,7 @@ describe('User workflow tests', () => {
                             .end((err, res) => {
                                 expect(res.status).to.be.equal(200);
                                 expect(res.body.error).to.be.equal(null);
-                                expect(res.body.data.token).to.be.a('string').that.is.not.empty;
+                                expect(res.body.data.userID).to.be.a('string').that.is.not.empty;
                                 done();
                             });
         })
