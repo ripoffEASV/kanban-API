@@ -1,7 +1,7 @@
 const express = require("express");
 const app = express();
 const orgs = require("../Models/OrganizationModel");
-const users = require("../Models/userModel");
+const user = require("../Models/userModel");
 const mongoose = require("mongoose");
 
 const { verifyToken, verifyUserHasUpdatePrivilege } = require("../auth");
@@ -38,6 +38,24 @@ app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req,
   try {
     if (!mongoose.Types.ObjectId.isValid(orgID)) {
       return res.status(400).send("Invalid organization ID.");
+    }
+
+    const foundOrg = await orgs.findById(orgID);
+
+    if (!foundOrg) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    if (foundOrg.ownerID !== data.ownerID) {
+        const newOwner = await user.findOne({ 
+          email: { $regex: new RegExp("^" + data.ownerID + "$", "i") }
+        });
+
+        if (!newOwner) {
+          return res.status(404).send("New owner not found.");
+        }
+
+        data.ownerID = newOwner._id;
     }
 
     const updatedOrg = await orgs.findByIdAndUpdate(
@@ -77,7 +95,6 @@ app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
 
 app.get("/getSpecificOrg/:orgID", async (req, res) => {
   try {
-    console.log("get specific org: ", req.params.orgID);
     const organizationDetails = await orgs.aggregate([
       {
         $match: {
@@ -148,7 +165,6 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
       },
     ]);
 
-    console.log("organizationDetails: ", organizationDetails);
 
     res
       .status(200)
