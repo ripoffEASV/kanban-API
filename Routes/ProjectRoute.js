@@ -119,7 +119,7 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
               {
                 $project: {
                   stateID: 1,
-                  taskTitle: 1, // Include fields you want to retrieve
+                  taskTitle: 1,
                   taskDescription: 1,
                   hoursExpected: 1,
                   hoursSpent: 1,
@@ -127,7 +127,6 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
                   labelText: 1,
                   assignedToID: 1,
                   createdByID: 1,
-                  // Add more fields if needed
                 },
               },
             ],
