@@ -127,6 +127,13 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
                   labelText: 1,
                   assignedToID: 1,
                   createdByID: 1,
+                  position: 1,
+                },
+              },
+
+              {
+                $sort: {
+                  position: 1,
                 },
               },
             ],
