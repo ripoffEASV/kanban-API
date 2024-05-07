@@ -113,8 +113,11 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
               },
             },
             {
-              $project: { _id: 0, password: 0 }, // Exclude the password field
+              $project: { id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1 }
             },
+            {
+              $project: { password: 0, _id: 0 }
+            }
           ],
           as: "owner",
         },
@@ -130,8 +133,11 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
               },
             },
             {
-              $project: { _id: 0, password: 0 }, // Exclude the password field
+              $project: { id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1 }
             },
+            {
+              $project: { password: 0, _id: 0 }
+            }
           ],
           as: "createdByUser",
         },
@@ -158,13 +164,18 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
               },
             },
             {
-              $project: { password: 0 }, // Exclude the password field
+              $project: { id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1 }
             },
+            {
+              $project: { password: 0, _id: 0 }
+            }
           ],
           as: "orgUsers",
         },
       },
     ]);
+    
+    
 
 
     res
