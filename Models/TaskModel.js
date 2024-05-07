@@ -12,6 +12,7 @@ var taskSchema = new Schema({
   parentTaskID: { type: String },
   assignedToID: { type: Array },
   createdByID: { type: String },
+  position: { type: Number },
 });
 
 module.exports = mongoose.model("tasks", taskSchema);

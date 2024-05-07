@@ -52,6 +52,7 @@ app.use("/api/projects", projectRoute);
 // app.use(stateRoute);
 // app.use(taskRoute);
 app.use("/api/users", userRoute);
+app.use("/api/tasks", taskRoute);
 
 app.listen(PORT, async (req, res) => {
   console.log("Server Listening on PORT:", PORT);

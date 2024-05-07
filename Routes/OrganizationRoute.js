@@ -1,10 +1,11 @@
 const express = require("express");
 const app = express();
 const orgs = require("../Models/OrganizationModel");
-const users = require("../Models/userModel");
+const user = require("../Models/userModel");
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
 
-const verifyToken = require("../auth");
+const { verifyToken, verifyUserHasUpdatePrivilege } = require("../auth");
 
 app.post("/addNewOrganization", verifyToken, async (req, res) => {
   try {
@@ -32,9 +33,51 @@ app.post("/addNewOrganization", verifyToken, async (req, res) => {
   }
 });
 
+app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req, res) => {
+  const { orgID } = req.params;
+  const data = req.body;
+  try {
+    if (!mongoose.Types.ObjectId.isValid(orgID)) {
+      return res.status(400).send("Invalid organization ID.");
+    }
+
+    const foundOrg = await orgs.findById(orgID);
+
+    if (!foundOrg) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    if (foundOrg.ownerID !== data.ownerID) {
+        const newOwner = await user.findOne({ 
+          email: { $regex: new RegExp("^" + data.ownerID + "$", "i") }
+        });
+
+        if (!newOwner) {
+          return res.status(404).send("New owner not found.");
+        }
+
+        data.ownerID = newOwner._id;
+    }
+
+    const updatedOrg = await orgs.findByIdAndUpdate(
+      orgID,
+      { $set: data },
+      { new: true, runValidators: true } // options to return the updated document and run schema validators
+    );
+
+    if (!updatedOrg) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    res.status(200).json({ message: "Organization updated successfully", organization: updatedOrg });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to update the organization", error: error.message });
+  }
+})
+
 app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
   try {
-    console.log(req.user);
 
     const foundOrgs = await orgs.find({
       $or: [
@@ -43,9 +86,6 @@ app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
         { "orgMembers.userID": req.user.id },
       ],
     });
-
-
-    console.log(foundOrgs);
 
     res.status(200).json({ organizations: foundOrgs });
   } catch (error) {
@@ -56,7 +96,6 @@ app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
 
 app.get("/getSpecificOrg/:orgID", async (req, res) => {
   try {
-    console.log("get specific org: ", req.params.orgID);
     const organizationDetails = await orgs.aggregate([
       {
         $match: {
@@ -127,7 +166,6 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
       },
     ]);
 
-    console.log("organizationDetails: ", organizationDetails);
 
     res
       .status(200)
@@ -137,5 +175,107 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+app.get("/check-user-invites", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userEmail = decoded.email;
+
+    const invitedOrgs = await orgs.find({
+      inviteArray: { $in: [userEmail] }
+    });
+
+    const invitations = await Promise.all(invitedOrgs.map(async (inv) => {
+      const ownerDetails = await user.findById(inv.ownerID);
+      return {
+        id: inv._id,
+        orgName: inv.orgName,
+        owner: ownerDetails ? {
+          fName: ownerDetails.fName,
+          lName: ownerDetails.lName,
+          email: ownerDetails.email,
+          color: ownerDetails.color
+        } : null
+      };
+    }));
+
+    return res.status(200).json(invitations);
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+})
+
+app.get("/accept-org-inv/:orgID", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  const { orgID } = req.params;
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userEmail = decoded.email;
+    const org = await orgs.findById(orgID);
+    if (!org) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    if (!org.inviteArray.includes(userEmail)) {
+      return res.status(400).send("Invite not found in the organization.");
+    }
+
+    const userObj = await user.findOne({ email: userEmail });
+    if (!userObj) {
+      return res.status(404).send("User not found.");
+    }
+
+    org.inviteArray = org.inviteArray.filter(email => email !== userEmail);
+
+    const newMember = { userID: userObj._id.toString() };
+    org.orgMembers.push(newMember);
+
+    await org.save();
+
+    return res.status(200).json({ message: "Invitation accepted." });
+
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err });
+  }
+})
+
+app.get("/decline-org-inv/:orgID", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  const { orgID } = req.params;
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userEmail = decoded.email;
+    const org = await orgs.findById(orgID);
+    if (!org) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    if (!org.inviteArray.includes(userEmail)) {
+      return res.status(400).send("Invite not found in the organization.");
+    }
+
+    org.inviteArray = org.inviteArray.filter(email => email !== userEmail);
+    await org.save();
+
+    return res.status(200).json({ message: "Invitation declined." });
+
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err });
+  }
+})
+
 
 module.exports = app;
