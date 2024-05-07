@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const tasks = require("../Models/TaskModel");
 const mongoose = require("mongoose");
-const verifyToken = require("../auth");
+const {verifyToken} = require("../auth");
 
 app.post("/updateSingleTask", verifyToken, async (req, res) => {
   try {
