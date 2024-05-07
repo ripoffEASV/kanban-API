@@ -47,7 +47,7 @@ app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req,
       return res.status(404).send("Organization not found.");
     }
 
-    if (foundOrg.ownerID !== data.ownerID) {
+    /* if (foundOrg.ownerID !== data.ownerID) {
         const newOwner = await user.findOne({ 
           email: { $regex: new RegExp("^" + data.ownerID + "$", "i") }
         });
@@ -57,7 +57,7 @@ app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req,
         }
 
         data.ownerID = newOwner._id;
-    }
+    } */
 
     const updatedOrg = await orgs.findByIdAndUpdate(
       orgID,
@@ -105,18 +105,29 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
       {
         $lookup: {
           from: "users",
-          let: { ownerId: "$ownerID" },
+          let: { ownerId: "$ownerID" },  // 'ownerId' is an array of string representations of ObjectId
           pipeline: [
             {
               $match: {
-                $expr: { $eq: ["$_id", { $toObjectId: "$$ownerId" }] },
-              },
+                $expr: {
+                  $in: [ "$_id", { $map: { 
+                                    input: "$$ownerId", 
+                                    as: "idStr", 
+                                    in: { $toObjectId: "$$idStr" } 
+                                  } 
+                                } ]
+                }
+              }
             },
             {
-              $project: { id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1 }
+              $project: {
+                id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1
+              }
             },
             {
-              $project: { password: 0, _id: 0 }
+              $project: {
+                password: 0, _id: 0
+              }
             }
           ],
           as: "owner",
