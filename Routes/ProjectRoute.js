@@ -14,10 +14,6 @@ app.post("/addNewProject", async (req, res) => {
     let stateIDArray = [];
     let userIDArray = [];
 
-    if (data.projectMembers.length <= 0) {
-      throw new Error("Project must have at least a single member");
-    }
-
     if (data.projectBoards.length <= 0) {
       throw new Error("Project must have at least a single board");
     }
@@ -49,6 +45,15 @@ app.post("/addNewProject", async (req, res) => {
       { _id: newProject._id },
       { projectStateIDs: stateIDArray }
     );
+
+    const updatedOrg = await orgs.findByIdAndUpdate(
+      data.orgID,
+      { $push: { projectIDs: newProject._id.toString() } }
+    );
+
+    if (!updatedOrg) {
+      return res.status(404).json({ message: "Organization not found." });
+    }
 
     res.status(200).json({
       message: "Project added successfully",

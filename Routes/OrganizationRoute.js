@@ -299,5 +299,40 @@ app.get("/decline-org-inv/:orgID", verifyToken, async (req, res) => {
   }
 })
 
+app.get("/delete-org/:orgID", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  const { orgID } = req.params;
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized"});
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userID = decoded.id;
+    const org = await orgs.findById(orgID);
+    if (!org) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    if (!org.ownerID.includes(userID) && org.createdByID !== userID) {
+      return res.status(403).json({ message: "Forbidden." });
+    }
+
+    org.projectIDs.forEach(project => {
+      console.log('Please delete this project!!', project);
+    });
+
+    const result = await orgs.findByIdAndDelete(orgID);
+    if (result) {
+      return res.status(200).json({ message: "Organization deleted successfully", data: result });
+    } else {
+      throw new Error("Failed to delete the organization");
+    }
+    
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err});
+  }
+})
+
 
 module.exports = app;
