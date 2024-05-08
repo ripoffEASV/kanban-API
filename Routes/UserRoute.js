@@ -158,7 +158,7 @@ app.post("/login", async (req, res) => {
 
     res.header("auth-token", token).json({
       error: null,
-      data: { userID: userFound._id },
+      data: { id: userFound._id, fName: userFound.fName, lName: userFound.lName, color: userFound.color, email: userFound.email, username: userFound.username },
     });
   } catch (error) {
     res.status(500).json({
