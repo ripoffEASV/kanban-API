@@ -5,7 +5,7 @@ const user = require("../Models/userModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-const verifyToken = require("../auth");
+const { verifyToken } = require("../auth");
 
 app.post("/register", async (req, res) => {
   const data = req.body;
@@ -90,6 +90,37 @@ app.get("/findByEmail/:email", async (req, res) => {
     });
   }
 });
+
+app.get("/find-user", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userID = decoded.id;
+
+    const foundUser = await user.findById(userID).select('-password');
+
+    if (!foundUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const userToReturn = {
+      id: foundUser._id,
+      username: foundUser.username,
+      email: foundUser.email,
+      fName: foundUser.fName,
+      lName: foundUser.lName,
+      color: foundUser.color
+    };
+
+    return res.status(200).json(userToReturn);
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err});
+  }
+})
 
 app.get('/logout', (req, res) => {
   res.cookie('auth-token', '', {
