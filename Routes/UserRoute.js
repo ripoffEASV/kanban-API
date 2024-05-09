@@ -48,19 +48,52 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  user
-    .find({})
-    .then((data) => {
-      console.log("test: ", data);
-      res.status(200).send(data);
-    })
-    .catch((err) => {
-      res.status(500).send({ message: err.message });
-    })
-    .finally(() => {
-      console.log("request completed");
-    });
+app.post("/update-user", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  const data = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userID = decoded.id;
+
+    const foundUser = await user.findById(userID).select('-password');
+
+    if (!foundUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!data.fName && !data.lName && !data.color && !data.password) {
+      return res.status(404).json({ message: 'No valid parameters provided, allowed: fName, lName, color, password' });
+    }
+
+    if (data.fName) {
+      foundUser.fName = data.fName;
+    }
+
+    if (data.lName) {
+      foundUser.lName = data.lName;
+    }
+
+    if (data.color) {
+      foundUser.color = data.color;
+    }
+
+    if (data.password) {
+      const salt = await bcrypt.genSalt(10);
+      const password = await bcrypt.hash(data.password, salt);
+      foundUser.password = password;
+    }
+
+    await foundUser.save();
+
+    res.json({ message: 'User updated successfully' });
+
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err});
+  }
 });
 
 app.get("/findByEmail/:email", async (req, res) => {
