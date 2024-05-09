@@ -2,6 +2,7 @@ const { registerValidation, loginValidation } = require("../validation");
 const express = require("express");
 const app = express();
 const user = require("../Models/userModel");
+const org = require("../Models/OrganizationModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
@@ -93,6 +94,52 @@ app.post("/update-user", verifyToken, async (req, res) => {
 
   } catch (err) {
     return res.status(500).json({ message: "Internal Server Error", error: err});
+  }
+});
+
+app.delete("/delete", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userID = decoded.id;
+
+    let ownedOrgs = await org.find({ ownerID: userID });
+
+    for (const organization of ownedOrgs) {
+      let newOwnerID = organization.ownerID.filter(id => id !== userID);
+      let newCreatedByID = null;
+
+      if (newOwnerID.length > 0) {
+        newCreatedByID = newOwnerID[0];
+      } else if (organization.orgMembers.length > 0) {
+        newCreatedByID = organization.orgMembers[0].userID;
+        newOwnerID = [organization.orgMembers[0].userID];
+      } else {
+        // TODO delete the org
+        console.log(`No members available to take over organization with ID: ${organization._id}`);
+        continue;  // Skip to the next organization
+      }
+
+      await org.updateOne(
+        { _id: organization._id },
+        {
+          $set: {
+            createdByID: newCreatedByID,
+            ownerID: newOwnerID
+          }
+        }
+      );
+    }
+
+    await user.findByIdAndDelete(userID);
+
+    return res.status(200).json({message: `User deleted, and changed ${ownedOrgs.length} organizations`});
+  } catch(err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err.message});
   }
 });
 
