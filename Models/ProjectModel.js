@@ -5,8 +5,7 @@ const projectsSchema = new Schema({
   projectName: { type: String },
   projectStateIDs: { type: Array },
   members: { type: Array },
-  orgID: {type: String},
+  orgID: { type: String },
 });
 
 module.exports = mongoose.model("projects", projectsSchema);
-
