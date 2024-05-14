@@ -40,6 +40,7 @@ describe('/First Test Collection', () => {
                 res.should.have.status(200);
                 const ownerID = res.body.org[0].ownerID;
                 const createdByID = res.body.org[0].createdByID;
+                process.env.ORG_ID = res.body.org[0]._id;
                 expect(createdByID).to.be.a('string').that.is.not.empty
                 expect(ownerID).to.be.an('array').that.is.not.empty;
                 expect(ownerID[0]).to.equal(createdByID);
