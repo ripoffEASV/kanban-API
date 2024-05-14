@@ -2,12 +2,10 @@ const express = require("express");
 const app = express();
 const tasks = require("../Models/TaskModel");
 const mongoose = require("mongoose");
-const {verifyToken} = require("../auth");
+const { verifyToken } = require("../auth");
 
 app.post("/updateSingleTask", verifyToken, async (req, res) => {
   try {
-    console.log("plz: ", req.body);
-
     const updateData = {
       taskTitle: req.body.taskTitle,
       taskDescription: req.body.taskDescription,
@@ -37,8 +35,6 @@ app.post("/updateSingleTask", verifyToken, async (req, res) => {
 
 app.delete("/deleteSingleTask", verifyToken, async (req, res) => {
   try {
-    console.log(req.body);
-
     const response = await tasks.findOneAndDelete({ _id: req.body.taskID });
 
     if (!response) {
@@ -59,8 +55,6 @@ app.delete("/deleteSingleTask", verifyToken, async (req, res) => {
 app.post("/updateTaskPosition", verifyToken, async (req, res) => {
   try {
     req.body.forEach(async (task) => {
-      console.log(task);
-
       const response = await tasks.findByIdAndUpdate(
         { _id: task._id },
         { position: task.position }

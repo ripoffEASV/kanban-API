@@ -6,6 +6,7 @@ const tasks = require("../Models/TaskModel");
 const orgs = require("../Models/OrganizationModel");
 const mongoose = require("mongoose");
 const { verifyToken } = require("../auth");
+const { ObjectId } = require("mongodb");
 
 app.post("/addNewProject", async (req, res) => {
   try {
@@ -315,6 +316,222 @@ app.post("/updateSingleProjectBoard", verifyToken, async (req, res) => {
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server error");
+  }
+});
+
+app.post("/getSingleProject", verifyToken, async (req, res) => {
+  try {
+    const projectID = req.body.projectID;
+
+    console.log(projectID);
+
+    //const response = await projects.findOne({ _id: projectID });
+
+    projects
+      .aggregate([
+        {
+          $match: {
+            _id: new ObjectId(projectID),
+          },
+        },
+        {
+          $lookup: {
+            from: "states",
+            let: { states: "$projectStateIDs" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $in: [
+                      { $toObjectId: "$_id" },
+                      {
+                        $map: {
+                          input: "$$states",
+                          as: "state",
+                          in: { $toObjectId: "$$state" },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: "projectStates",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            let: { members: "$members" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $in: [
+                      { $toObjectId: "$_id" },
+                      {
+                        $map: {
+                          input: "$$members",
+                          as: "member",
+                          in: { $toObjectId: "$$member" },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+              {
+                $project: {
+                  email: 1,
+                  fName: 1,
+                  lName: 1,
+                  color: 1,
+                },
+              },
+              {
+                $unset: "password",
+              },
+            ],
+            as: "membersInfo",
+          },
+        },
+        {
+          $project: {
+            projectName: 1,
+            projectStateIDs: 1,
+            orgID: 1,
+            projectStates: 1,
+            membersInfo: 1,
+          },
+        },
+      ])
+      .then((results) => {
+        //console.log("aggregate: ", results);
+        res.status(200).json({
+          Title: "Data retrieved",
+          data: results,
+        });
+      });
+
+    // if (!response) {
+    //   throw new Error();
+    // }
+
+    // console.log(response);
+
+    // res.status(200).json({
+    //   Title: "Data retrieved",
+    //   data: response,
+    // });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server error");
+  }
+});
+
+app.post("/updateProjectData", async (req, res) => {
+  try {
+    console.log(req.body);
+
+    // if the project should have a new name, then it gets updated here
+    if (req.body.newProjectName.length > 0) {
+      await projects.findByIdAndUpdate(
+        { _id: req.body.projectID },
+        {
+          projectName: req.body.newProjectName,
+        }
+      );
+    }
+
+    //iterate over each board,
+    // if the board doesnt have an ID, create it and then add it to the project
+    req.body.newBoards.forEach(async (board) => {
+      if (board.ID.length === 0) {
+        console.log("new board");
+
+        const addNewProjectBoard = await states.create({
+          stateName: board.stateName,
+          position: board.position,
+        });
+        await projects.findByIdAndUpdate(
+          { _id: req.body.projectID },
+          { $push: { projectStateIDs: addNewProjectBoard._id } }
+        );
+      }
+
+      if (board.delete) {
+        await tasks.deleteMany({ stateID: board.ID }).then(async () => {
+          await states.findOneAndDelete({ _id: board.ID });
+        });
+      }
+    });
+
+    //deletes every user id
+    await projects.findOneAndUpdate(
+      {
+        _id: req.body.projectID,
+      },
+      { $set: { members: [] } }
+    );
+
+    //adds every user from the "newMembersArray"
+    req.body.newMembers.forEach(async (member) => {
+      await projects.findByIdAndUpdate(
+        { _id: req.body.projectID },
+        { $addToSet: { members: member._id } }
+      );
+    });
+
+    res.status(200).json({ title: "Board successfully updated" });
+  } catch (error) {
+    console.log(error.message);
+  }
+});
+
+// app.delete("/deleteProject", verifyToken, async (req, res) => {
+//   try {
+//     console.log("here");
+//     await projects.findById(req.body.projectID).then((project) => {
+//       console.log(project);
+//       project.projectStateIDs.forEach(async (boardID, index) => {
+//         console.log(boardID.substring(13, boardID.length - 1));
+
+//         console.log(index, boardID._id);
+//         await tasks.deleteMany({ stateID: boardID._id }).then(() => {
+//           console.log("done");
+//         });
+//       });
+//     });
+//   } catch (error) {
+//     console.log(error.message);
+//   }
+// });
+
+app.delete("/deleteProject", verifyToken, async (req, res) => {
+  try {
+    const project = await projects.findById(req.body.projectID);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    for (const boardID of project.projectStateIDs) {
+      try {
+        await tasks.deleteMany({ stateID: boardID });
+        console.log(`Deleted tasks for board ${boardID}`);
+      } catch (error) {
+        console.error(
+          `Error deleting tasks for board ${boardID}: ${error.message}`
+        );
+      }
+    }
+
+    // Once tasks are deleted, delete the project
+    await projects.findByIdAndDelete(req.body.projectID);
+    console.log("Project deleted successfully");
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error deleting project:", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
