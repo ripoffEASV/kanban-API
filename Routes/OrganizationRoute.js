@@ -47,7 +47,7 @@ app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req,
       return res.status(404).send("Organization not found.");
     }
 
-    if (foundOrg.ownerID !== data.ownerID) {
+    /* if (foundOrg.ownerID !== data.ownerID) {
         const newOwner = await user.findOne({ 
           email: { $regex: new RegExp("^" + data.ownerID + "$", "i") }
         });
@@ -57,7 +57,7 @@ app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req,
         }
 
         data.ownerID = newOwner._id;
-    }
+    } */
 
     const updatedOrg = await orgs.findByIdAndUpdate(
       orgID,
@@ -105,16 +105,30 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
       {
         $lookup: {
           from: "users",
-          let: { ownerId: "$ownerID" },
+          let: { ownerId: "$ownerID" },  // 'ownerId' is an array of string representations of ObjectId
           pipeline: [
             {
               $match: {
-                $expr: { $eq: ["$_id", { $toObjectId: "$$ownerId" }] },
-              },
+                $expr: {
+                  $in: [ "$_id", { $map: { 
+                                    input: "$$ownerId", 
+                                    as: "idStr", 
+                                    in: { $toObjectId: "$$idStr" } 
+                                  } 
+                                } ]
+                }
+              }
             },
             {
-              $project: { _id: 0, password: 0 }, // Exclude the password field
+              $project: {
+                id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1
+              }
             },
+            {
+              $project: {
+                password: 0, _id: 0
+              }
+            }
           ],
           as: "owner",
         },
@@ -130,8 +144,11 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
               },
             },
             {
-              $project: { _id: 0, password: 0 }, // Exclude the password field
+              $project: { id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1 }
             },
+            {
+              $project: { password: 0, _id: 0 }
+            }
           ],
           as: "createdByUser",
         },
@@ -158,13 +175,18 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
               },
             },
             {
-              $project: { password: 0 }, // Exclude the password field
+              $project: { id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1 }
             },
+            {
+              $project: { password: 0, _id: 0 }
+            }
           ],
           as: "orgUsers",
         },
       },
     ]);
+    
+    
 
 
     res
@@ -274,6 +296,41 @@ app.get("/decline-org-inv/:orgID", verifyToken, async (req, res) => {
 
   } catch (err) {
     return res.status(500).json({ message: "Internal Server Error", error: err });
+  }
+})
+
+app.get("/delete-org/:orgID", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  const { orgID } = req.params;
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized"});
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userID = decoded.id;
+    const org = await orgs.findById(orgID);
+    if (!org) {
+      return res.status(404).send("Organization not found.");
+    }
+
+    if (!org.ownerID.includes(userID) && org.createdByID !== userID) {
+      return res.status(403).json({ message: "Forbidden." });
+    }
+
+    org.projectIDs.forEach(project => {
+      console.log('Please delete this project!!', project);
+    });
+
+    const result = await orgs.findByIdAndDelete(orgID);
+    if (result) {
+      return res.status(200).json({ message: "Organization deleted successfully", data: result });
+    } else {
+      throw new Error("Failed to delete the organization");
+    }
+    
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err});
   }
 })
 

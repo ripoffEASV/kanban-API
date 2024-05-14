@@ -2,10 +2,11 @@ const { registerValidation, loginValidation } = require("../validation");
 const express = require("express");
 const app = express();
 const user = require("../Models/userModel");
+const org = require("../Models/OrganizationModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-const verifyToken = require("../auth");
+const { verifyToken } = require("../auth");
 
 app.post("/register", async (req, res) => {
   const data = req.body;
@@ -48,19 +49,98 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  user
-    .find({})
-    .then((data) => {
-      console.log("test: ", data);
-      res.status(200).send(data);
-    })
-    .catch((err) => {
-      res.status(500).send({ message: err.message });
-    })
-    .finally(() => {
-      console.log("request completed");
-    });
+app.post("/update-user", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  const data = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userID = decoded.id;
+
+    const foundUser = await user.findById(userID).select('-password');
+
+    if (!foundUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!data.fName && !data.lName && !data.color && !data.password) {
+      return res.status(404).json({ message: 'No valid parameters provided, allowed: fName, lName, color, password' });
+    }
+
+    if (data.fName) {
+      foundUser.fName = data.fName;
+    }
+
+    if (data.lName) {
+      foundUser.lName = data.lName;
+    }
+
+    if (data.color) {
+      foundUser.color = data.color;
+    }
+
+    if (data.password) {
+      const salt = await bcrypt.genSalt(10);
+      const password = await bcrypt.hash(data.password, salt);
+      foundUser.password = password;
+    }
+
+    await foundUser.save();
+
+    res.json({ message: 'User updated successfully' });
+
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err});
+  }
+});
+
+app.delete("/delete", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userID = decoded.id;
+
+    let ownedOrgs = await org.find({ ownerID: userID });
+
+    for (const organization of ownedOrgs) {
+      let newOwnerID = organization.ownerID.filter(id => id !== userID);
+      let newCreatedByID = null;
+
+      if (newOwnerID.length > 0) {
+        newCreatedByID = newOwnerID[0];
+      } else if (organization.orgMembers.length > 0) {
+        newCreatedByID = organization.orgMembers[0].userID;
+        newOwnerID = [organization.orgMembers[0].userID];
+      } else {
+        // TODO delete the org
+        console.log(`No members available to take over organization with ID: ${organization._id}`);
+        continue;  // Skip to the next organization
+      }
+
+      await org.updateOne(
+        { _id: organization._id },
+        {
+          $set: {
+            createdByID: newCreatedByID,
+            ownerID: newOwnerID
+          }
+        }
+      );
+    }
+
+    await user.findByIdAndDelete(userID);
+
+    return res.status(200).json({message: `User deleted, and changed ${ownedOrgs.length} organizations`});
+  } catch(err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err.message});
+  }
 });
 
 app.get("/findByEmail/:email", async (req, res) => {
@@ -90,6 +170,37 @@ app.get("/findByEmail/:email", async (req, res) => {
     });
   }
 });
+
+app.get("/find-user", verifyToken, async (req, res) => {
+  const token = req.cookies['auth-token'];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET);
+    const userID = decoded.id;
+
+    const foundUser = await user.findById(userID).select('-password');
+
+    if (!foundUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const userToReturn = {
+      id: foundUser._id,
+      username: foundUser.username,
+      email: foundUser.email,
+      fName: foundUser.fName,
+      lName: foundUser.lName,
+      color: foundUser.color
+    };
+
+    return res.status(200).json(userToReturn);
+  } catch (err) {
+    return res.status(500).json({ message: "Internal Server Error", error: err});
+  }
+})
 
 app.get('/logout', (req, res) => {
   res.cookie('auth-token', '', {
@@ -158,7 +269,7 @@ app.post("/login", async (req, res) => {
 
     res.header("auth-token", token).json({
       error: null,
-      data: { userID: userFound._id },
+      data: { id: userFound._id, fName: userFound.fName, lName: userFound.lName, color: userFound.color, email: userFound.email, username: userFound.username },
     });
   } catch (error) {
     res.status(500).json({

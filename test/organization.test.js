@@ -41,8 +41,8 @@ describe('/First Test Collection', () => {
                 const ownerID = res.body.org[0].ownerID;
                 const createdByID = res.body.org[0].createdByID;
                 expect(createdByID).to.be.a('string').that.is.not.empty
-                expect(ownerID).to.be.a('string').that.is.not.empty
-                expect(createdByID).to.be.equal(ownerID)
+                expect(ownerID).to.be.an('array').that.is.not.empty;
+                expect(ownerID[0]).to.equal(createdByID);
                 done();
             });
     });
