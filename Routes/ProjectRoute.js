@@ -43,7 +43,7 @@ app.post("/addNewProject", async (req, res) => {
     );
 
     await projects.findOneAndUpdate(
-      { _id: newProject._id },
+      { _id: newProject._id.toString() },
       { projectStateIDs: stateIDArray }
     );
 
