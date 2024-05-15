@@ -5,6 +5,7 @@ const user = require("../Models/userModel");
 const org = require("../Models/OrganizationModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const { deleteOrg } = require('../services/dbHelper');
 
 const { verifyToken } = require("../auth");
 
@@ -108,6 +109,9 @@ app.delete("/delete", verifyToken, async (req, res) => {
     const userID = decoded.id;
 
     let ownedOrgs = await org.find({ ownerID: userID });
+    deleteOrg('skibidi');
+
+    return res.status(200).json({message: `yessir temp stopped`});
 
     for (const organization of ownedOrgs) {
       let newOwnerID = organization.ownerID.filter(id => id !== userID);
