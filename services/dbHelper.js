@@ -14,4 +14,4 @@ async function deleteState(id) {
   console.log(id);
 }
 
-module.exports = { deleteOrg };
+module.exports = { deleteOrg, deleteProject, deleteState };
