@@ -36,6 +36,7 @@ app.post("/addNewProject", async (req, res) => {
       data.projectBoards.map(async (element) => {
         let stateID = await states.create({
           stateName: element.title,
+          position: element.position
         });
         const resultID = stateID._id;
         stateIDArray.push(resultID); // Push just the ID, not in an object
@@ -95,6 +96,7 @@ app.get("/getSpecificProject/:projectID", async (req, res) => {
                 $project: {
                   stateName: 1,
                   stateID: "$_id",
+                  position: 1,
                 },
               },
             ],
@@ -323,7 +325,6 @@ app.post("/getSingleProject", verifyToken, async (req, res) => {
   try {
     const projectID = req.body.projectID;
 
-    console.log(projectID);
 
     //const response = await projects.findOne({ _id: projectID });
 
@@ -431,7 +432,6 @@ app.post("/getSingleProject", verifyToken, async (req, res) => {
 
 app.post("/updateProjectData", async (req, res) => {
   try {
-    console.log(req.body);
 
     // if the project should have a new name, then it gets updated here
     if (req.body.newProjectName.length > 0) {
@@ -447,7 +447,6 @@ app.post("/updateProjectData", async (req, res) => {
     // if the board doesnt have an ID, create it and then add it to the project
     req.body.newBoards.forEach(async (board) => {
       if (board.ID.length === 0) {
-        console.log("new board");
 
         const addNewProjectBoard = await states.create({
           stateName: board.stateName,
@@ -517,7 +516,6 @@ app.delete("/deleteProject", verifyToken, async (req, res) => {
     for (const boardID of project.projectStateIDs) {
       try {
         await tasks.deleteMany({ stateID: boardID });
-        console.log(`Deleted tasks for board ${boardID}`);
       } catch (error) {
         console.error(
           `Error deleting tasks for board ${boardID}: ${error.message}`
@@ -527,12 +525,27 @@ app.delete("/deleteProject", verifyToken, async (req, res) => {
 
     // Once tasks are deleted, delete the project
     await projects.findByIdAndDelete(req.body.projectID);
-    console.log("Project deleted successfully");
     res.sendStatus(200);
   } catch (error) {
     console.error("Error deleting project:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.post("/updateStatesPos", verifyToken, async (req, res) => {
+  try {
+    const statesToUpdate = req.body;
+    for (const currentState of statesToUpdate) {
+      await states.findOneAndUpdate(
+        { _id: currentState.ID },
+        { position: currentState.position }
+      );
+    }
+
+    return res.status(200).json({ message: 'States updated successfully' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error:', message: err.message })
+  }
+})
 
 module.exports = app;
