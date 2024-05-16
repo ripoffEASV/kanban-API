@@ -39,6 +39,8 @@ app.delete("/deleteSingleTask", verifyToken, async (req, res) => {
   try {
     const response = await tasks.findOneAndDelete({ _id: req.body.taskID });
 
+    console.log(req.body);
+
     if (!response) {
       throw new Error("no response");
     }

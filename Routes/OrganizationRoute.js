@@ -4,7 +4,7 @@ const orgs = require("../Models/OrganizationModel");
 const user = require("../Models/userModel");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
-const { deleteProject } = require('../services/dbHelper');
+const { deleteProject } = require("../services/dbHelper");
 
 const { verifyToken, verifyUserHasUpdatePrivilege } = require("../auth");
 
@@ -41,8 +41,6 @@ app.post(
     const { orgID } = req.params;
     const data = req.body;
     try {
-      console.log(data, orgID);
-
       if (!mongoose.Types.ObjectId.isValid(orgID)) {
         return res.status(400).send("Invalid organization ID.");
       }
@@ -173,7 +171,7 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
       {
         $lookup: {
           from: "users",
-          let: { orgMemberUserIDs: "$orgMembers.id" },
+          let: { orgMemberUserIDs: "$orgMembers.userID" },
           pipeline: [
             {
               $match: {

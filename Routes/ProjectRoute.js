@@ -7,7 +7,7 @@ const orgs = require("../Models/OrganizationModel");
 const mongoose = require("mongoose");
 const { verifyToken } = require("../auth");
 const { ObjectId } = require("mongodb");
-const { deleteProject } = require('../services/dbHelper');
+const { deleteProject } = require("../services/dbHelper");
 
 app.post("/addNewProject", async (req, res) => {
   try {
@@ -409,7 +409,6 @@ app.post("/getSingleProject", verifyToken, async (req, res) => {
           data: results,
         });
       });
-
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server error");
@@ -475,9 +474,12 @@ app.delete("/deleteProject", verifyToken, async (req, res) => {
   const id = req.body.projectID;
   try {
     await deleteProject(id);
-    return res.status(200).json({ message: 'Deleted project!' });
+    return res.status(200).json({ message: "Deleted project!" });
   } catch (error) {
-    return res.status(500).json({ error: "Internal server error", message: error.message });
+    console.log(error.message);
+    return res
+      .status(500)
+      .json({ error: "Internal server error", message: error.message });
   }
 });
 

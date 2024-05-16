@@ -125,11 +125,11 @@ app.delete("/delete", verifyToken, async (req, res) => {
         newOwnerID = [organization.orgMembers[0].userID];
       } else {
         // TODO delete the org
-        const ownedOrgsIDs = ownedOrgs.map(o => o._id.toString());
+        const ownedOrgsIDs = ownedOrgs.map((o) => o._id.toString());
         for (const orgID of ownedOrgsIDs) {
           await deleteOrg(orgID);
         }
-        continue;  // Skip to the next organization
+        continue; // Skip to the next organization
       }
 
       await org.updateOne(
