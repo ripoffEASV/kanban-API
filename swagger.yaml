@@ -95,6 +95,10 @@ components:
         createdByID:
           type: string
           example: "user ID of the person, who created the task"
+          example: "an array of user id's who is working on the task"
+        position:
+          type: number
+          example: "position for the task, a lower number = higher on the list"
 
     userModel:
       type: object
@@ -200,6 +204,141 @@ paths:
         500:
           description: something went wrong with getting specific project
 
+  /updateSingleProjectBoard:
+    post:
+      tags:
+        -projects
+      summary: Updates a Board/State in a project
+      description: This endpoint is responsible for updating multiple parameters for a Board/State in a project. 
+      requestBody:
+        description: reads object information and sends the information to the relevant collections in MongoDB
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stateID: 
+                  type: string
+                stateName:
+                  type: string
+                taskArray: 
+                  type: array
+                
+        response:
+          200:
+            description: returns updated state
+          404:
+            description: State not found
+          500:
+            description: server error
+
+  /getSingleProject:
+    post:
+      tags:
+        -projects
+      summary: retrieves a single project
+      description: This endpoint is responsible for getting a specific project, but also returns extra information based on the projectID, with the help of aggregation. 
+      requestBody:
+        description: reads object information and sends the information to the relevant collections in MongoDB
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                projectID: 
+                  type: string
+                
+        response:
+          200:
+            description: returns updated state
+          404:
+            description: State not found
+          500:
+            description: server error
+
+  /updateProjectData:
+    post:
+      tags:
+        -projects
+      summary: retrieves a single project
+      description: This endpoint is responsible for updating a specific project, if the user wishes to change the name, add/remove boards, add/remove members. 
+      requestBody:
+        description: reads object information and sends the information to the relevant collections in MongoDB
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                projectID: 
+                  type: string
+              properties:
+                newProjectName: 
+                  type: string
+              properties:
+                nowProjectBoards: 
+                  type: array
+                
+        response:
+          200:
+            description: Board successfully updated
+          500:
+            description: server error
+
+  /deleteProject:
+    delete:
+      tags:
+        -projects
+      summary: deletes a single project
+      description: This endpoint is responsible for deleting a specific project, it also deletes tasks, belonging to States (which gets deleted after the tasks), which belongs to the project. 
+      requestBody:
+        description: reads object information and sends the information to the relevant collections in MongoDB
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                projectID: 
+                  type: string
+              properties:
+                newProjectName: 
+                  type: string
+              properties:
+                nowProjectBoards: 
+                  type: array
+                
+        response:
+          200:
+            description: Board successfully updated
+          404:
+            description: project not found
+          500:
+            description: internal server error
+
+  /updateStatePos:
+    post:
+      tags:
+        -projects
+      summary: updates a State's Position
+      description: This endpoint is responsible for updating a State's position, after it has been dropped by the user. 
+      requestBody:
+        description: reads object information and sends the information to the relevant collections in MongoDB
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                _id: 
+                  type: string
+              properties:
+                position: 
+                  type: string
+                
+        response:
+          200:
+            description: states updated successfully
+          500:
+            description: internal server error
+
   /register:
       post:
         tags:
@@ -228,6 +367,8 @@ paths:
         response:
           200:
             description: user added successfully
+          400:
+            description: something wasnt found
           500:
             description: Something went wrong, either with try/catch or thrown errors
 

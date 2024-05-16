@@ -4,6 +4,7 @@ const orgs = require("../Models/OrganizationModel");
 const user = require("../Models/userModel");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
+const { deleteProject } = require('../services/dbHelper');
 
 const { verifyToken, verifyUserHasUpdatePrivilege } = require("../auth");
 
@@ -33,52 +34,51 @@ app.post("/addNewOrganization", verifyToken, async (req, res) => {
   }
 });
 
-app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req, res) => {
-  const { orgID } = req.params;
-  const data = req.body;
-  try {
-    if (!mongoose.Types.ObjectId.isValid(orgID)) {
-      return res.status(400).send("Invalid organization ID.");
+app.post(
+  "/updateOrganization/:orgID",
+  verifyUserHasUpdatePrivilege,
+  async (req, res) => {
+    const { orgID } = req.params;
+    const data = req.body;
+    try {
+      console.log(data, orgID);
+
+      if (!mongoose.Types.ObjectId.isValid(orgID)) {
+        return res.status(400).send("Invalid organization ID.");
+      }
+
+      const foundOrg = await orgs.findById(orgID);
+
+      if (!foundOrg) {
+        return res.status(404).send("Organization not found.");
+      }
+
+      const updatedOrg = await orgs.findByIdAndUpdate(
+        { _id: orgID },
+        { $set: data },
+        { new: true, runValidators: true } // options to return the updated document and run schema validators
+      );
+
+      if (!updatedOrg) {
+        return res.status(404).send("Organization not found.");
+      }
+
+      res.status(200).json({
+        message: "Organization updated successfully",
+        organization: updatedOrg,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: "Failed to update the organization",
+        error: error.message,
+      });
     }
-
-    const foundOrg = await orgs.findById(orgID);
-
-    if (!foundOrg) {
-      return res.status(404).send("Organization not found.");
-    }
-
-    /* if (foundOrg.ownerID !== data.ownerID) {
-        const newOwner = await user.findOne({ 
-          email: { $regex: new RegExp("^" + data.ownerID + "$", "i") }
-        });
-
-        if (!newOwner) {
-          return res.status(404).send("New owner not found.");
-        }
-
-        data.ownerID = newOwner._id;
-    } */
-
-    const updatedOrg = await orgs.findByIdAndUpdate(
-      orgID,
-      { $set: data },
-      { new: true, runValidators: true } // options to return the updated document and run schema validators
-    );
-
-    if (!updatedOrg) {
-      return res.status(404).send("Organization not found.");
-    }
-
-    res.status(200).json({ message: "Organization updated successfully", organization: updatedOrg });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to update the organization", error: error.message });
   }
-})
+);
 
 app.get("/getOrganizationsFromID", verifyToken, async (req, res) => {
   try {
-
     const foundOrgs = await orgs.find({
       $or: [
         { createdByID: req.user.id },
@@ -105,30 +105,40 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
       {
         $lookup: {
           from: "users",
-          let: { ownerId: "$ownerID" },  // 'ownerId' is an array of string representations of ObjectId
+          let: { ownerId: "$ownerID" }, // 'ownerId' is an array of string representations of ObjectId
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: [ "$_id", { $map: { 
-                                    input: "$$ownerId", 
-                                    as: "idStr", 
-                                    in: { $toObjectId: "$$idStr" } 
-                                  } 
-                                } ]
-                }
-              }
+                  $in: [
+                    "$_id",
+                    {
+                      $map: {
+                        input: "$$ownerId",
+                        as: "idStr",
+                        in: { $toObjectId: "$$idStr" },
+                      },
+                    },
+                  ],
+                },
+              },
             },
             {
               $project: {
-                id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1
-              }
+                id: "$_id",
+                username: 1,
+                email: 1,
+                fName: 1,
+                lName: 1,
+                color: 1,
+              },
             },
             {
               $project: {
-                password: 0, _id: 0
-              }
-            }
+                password: 0,
+                _id: 0,
+              },
+            },
           ],
           as: "owner",
         },
@@ -144,11 +154,18 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
               },
             },
             {
-              $project: { id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1 }
+              $project: {
+                id: "$_id",
+                username: 1,
+                email: 1,
+                fName: 1,
+                lName: 1,
+                color: 1,
+              },
             },
             {
-              $project: { password: 0, _id: 0 }
-            }
+              $project: { password: 0, _id: 0 },
+            },
           ],
           as: "createdByUser",
         },
@@ -156,7 +173,7 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
       {
         $lookup: {
           from: "users",
-          let: { orgMemberUserIDs: "$orgMembers.userID" },
+          let: { orgMemberUserIDs: "$orgMembers.id" },
           pipeline: [
             {
               $match: {
@@ -175,19 +192,23 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
               },
             },
             {
-              $project: { id: "$_id", username: 1, email: 1, fName: 1, lName: 1, color: 1 }
+              $project: {
+                id: "$_id",
+                username: 1,
+                email: 1,
+                fName: 1,
+                lName: 1,
+                color: 1,
+              },
             },
             {
-              $project: { password: 0, _id: 0 }
-            }
+              $project: { password: 0, _id: 0 },
+            },
           ],
           as: "orgUsers",
         },
       },
     ]);
-    
-    
-
 
     res
       .status(200)
@@ -199,7 +220,7 @@ app.get("/getSpecificOrg/:orgID", async (req, res) => {
 });
 
 app.get("/check-user-invites", verifyToken, async (req, res) => {
-  const token = req.cookies['auth-token'];
+  const token = req.cookies["auth-token"];
   if (!token) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -209,31 +230,35 @@ app.get("/check-user-invites", verifyToken, async (req, res) => {
     const userEmail = decoded.email;
 
     const invitedOrgs = await orgs.find({
-      inviteArray: { $in: [userEmail] }
+      inviteArray: { $in: [userEmail] },
     });
 
-    const invitations = await Promise.all(invitedOrgs.map(async (inv) => {
-      const ownerDetails = await user.findById(inv.ownerID);
-      return {
-        id: inv._id,
-        orgName: inv.orgName,
-        owner: ownerDetails ? {
-          fName: ownerDetails.fName,
-          lName: ownerDetails.lName,
-          email: ownerDetails.email,
-          color: ownerDetails.color
-        } : null
-      };
-    }));
+    const invitations = await Promise.all(
+      invitedOrgs.map(async (inv) => {
+        const ownerDetails = await user.findById(inv.ownerID);
+        return {
+          id: inv._id,
+          orgName: inv.orgName,
+          owner: ownerDetails
+            ? {
+                fName: ownerDetails.fName,
+                lName: ownerDetails.lName,
+                email: ownerDetails.email,
+                color: ownerDetails.color,
+              }
+            : null,
+        };
+      })
+    );
 
     return res.status(200).json(invitations);
   } catch (err) {
     return res.status(500).json({ message: "Internal Server Error" });
   }
-})
+});
 
 app.get("/accept-org-inv/:orgID", verifyToken, async (req, res) => {
-  const token = req.cookies['auth-token'];
+  const token = req.cookies["auth-token"];
   const { orgID } = req.params;
   if (!token) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -256,7 +281,7 @@ app.get("/accept-org-inv/:orgID", verifyToken, async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
-    org.inviteArray = org.inviteArray.filter(email => email !== userEmail);
+    org.inviteArray = org.inviteArray.filter((email) => email !== userEmail);
 
     const newMember = { userID: userObj._id.toString() };
     org.orgMembers.push(newMember);
@@ -264,14 +289,15 @@ app.get("/accept-org-inv/:orgID", verifyToken, async (req, res) => {
     await org.save();
 
     return res.status(200).json({ message: "Invitation accepted." });
-
   } catch (err) {
-    return res.status(500).json({ message: "Internal Server Error", error: err });
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: err });
   }
-})
+});
 
 app.get("/decline-org-inv/:orgID", verifyToken, async (req, res) => {
-  const token = req.cookies['auth-token'];
+  const token = req.cookies["auth-token"];
   const { orgID } = req.params;
   if (!token) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -289,21 +315,22 @@ app.get("/decline-org-inv/:orgID", verifyToken, async (req, res) => {
       return res.status(400).send("Invite not found in the organization.");
     }
 
-    org.inviteArray = org.inviteArray.filter(email => email !== userEmail);
+    org.inviteArray = org.inviteArray.filter((email) => email !== userEmail);
     await org.save();
 
     return res.status(200).json({ message: "Invitation declined." });
-
   } catch (err) {
-    return res.status(500).json({ message: "Internal Server Error", error: err });
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: err });
   }
-})
+});
 
 app.get("/delete-org/:orgID", verifyToken, async (req, res) => {
-  const token = req.cookies['auth-token'];
+  const token = req.cookies["auth-token"];
   const { orgID } = req.params;
   if (!token) {
-    return res.status(401).json({ message: "Unauthorized"});
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
@@ -318,21 +345,23 @@ app.get("/delete-org/:orgID", verifyToken, async (req, res) => {
       return res.status(403).json({ message: "Forbidden." });
     }
 
-    org.projectIDs.forEach(project => {
-      console.log('Please delete this project!!', project);
-    });
+    for (const project of org.projectIDs) {
+      await deleteProject(project);
+    }
 
     const result = await orgs.findByIdAndDelete(orgID);
     if (result) {
-      return res.status(200).json({ message: "Organization deleted successfully", data: result });
+      return res
+        .status(200)
+        .json({ message: "Organization deleted successfully", data: result });
     } else {
       throw new Error("Failed to delete the organization");
     }
-    
   } catch (err) {
-    return res.status(500).json({ message: "Internal Server Error", error: err});
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: err });
   }
-})
-
+});
 
 module.exports = app;
