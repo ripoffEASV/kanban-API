@@ -5,7 +5,7 @@ const user = require("../Models/userModel");
 const org = require("../Models/OrganizationModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { deleteOrg } = require('../services/dbHelper');
+const { deleteOrg } = require("../services/dbHelper");
 
 const { verifyToken } = require("../auth");
 
@@ -51,9 +51,9 @@ app.post("/register", async (req, res) => {
 });
 
 app.post("/update-user", verifyToken, async (req, res) => {
-  const token = req.cookies['auth-token'];
+  const token = req.cookies["auth-token"];
   if (!token) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ message: "Unauthorized" });
   }
   const data = req.body;
 
@@ -61,14 +61,17 @@ app.post("/update-user", verifyToken, async (req, res) => {
     const decoded = jwt.verify(token, process.env.SECRET);
     const userID = decoded.id;
 
-    const foundUser = await user.findById(userID).select('-password');
+    const foundUser = await user.findById(userID).select("-password");
 
     if (!foundUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     if (!data.fName && !data.lName && !data.color && !data.password) {
-      return res.status(404).json({ message: 'No valid parameters provided, allowed: fName, lName, color, password' });
+      return res.status(404).json({
+        message:
+          "No valid parameters provided, allowed: fName, lName, color, password",
+      });
     }
 
     if (data.fName) {
@@ -91,17 +94,18 @@ app.post("/update-user", verifyToken, async (req, res) => {
 
     await foundUser.save();
 
-    res.json({ message: 'User updated successfully' });
-
+    res.json({ message: "User updated successfully" });
   } catch (err) {
-    return res.status(500).json({ message: "Internal Server Error", error: err});
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: err });
   }
 });
 
 app.delete("/delete", verifyToken, async (req, res) => {
-  const token = req.cookies['auth-token'];
+  const token = req.cookies["auth-token"];
   if (!token) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
@@ -109,12 +113,12 @@ app.delete("/delete", verifyToken, async (req, res) => {
     const userID = decoded.id;
 
     let ownedOrgs = await org.find({ ownerID: userID });
-    deleteOrg('skibidi');
+    deleteOrg("skibidi");
 
-    return res.status(200).json({message: `yessir temp stopped`});
+    return res.status(200).json({ message: `yessir temp stopped` });
 
     for (const organization of ownedOrgs) {
-      let newOwnerID = organization.ownerID.filter(id => id !== userID);
+      let newOwnerID = organization.ownerID.filter((id) => id !== userID);
       let newCreatedByID = null;
 
       if (newOwnerID.length > 0) {
@@ -124,8 +128,10 @@ app.delete("/delete", verifyToken, async (req, res) => {
         newOwnerID = [organization.orgMembers[0].userID];
       } else {
         // TODO delete the org
-        console.log(`No members available to take over organization with ID: ${organization._id}`);
-        continue;  // Skip to the next organization
+        console.log(
+          `No members available to take over organization with ID: ${organization._id}`
+        );
+        continue; // Skip to the next organization
       }
 
       await org.updateOne(
@@ -133,62 +139,66 @@ app.delete("/delete", verifyToken, async (req, res) => {
         {
           $set: {
             createdByID: newCreatedByID,
-            ownerID: newOwnerID
-          }
+            ownerID: newOwnerID,
+          },
         }
       );
     }
 
     await user.findByIdAndDelete(userID);
 
-    return res.status(200).json({message: `User deleted, and changed ${ownedOrgs.length} organizations`});
-  } catch(err) {
-    return res.status(500).json({ message: "Internal Server Error", error: err.message});
-  }
-});
-
-app.get("/findByEmail/:email", async (req, res) => {
-  try {
-    const data = {
-      email: req.params.email,
-    };
-
-    console.log(data);
-
-    await user
-      .find({ email: req.params.email })
-      .then((data) => {
-        console.log("user: ", data);
-        res.status(200).send(data);
-      })
-      .catch((err) => {
-        res.status(500).send({ message: err.message });
-      })
-      .finally(() => {
-        console.log("request completed");
-      });
-  } catch (error) {
-    res.status(500).json({
-      Title: "Something went wrong with getting user from email",
-      Message: error.message,
+    return res.status(200).json({
+      message: `User deleted, and changed ${ownedOrgs.length} organizations`,
     });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: err.message });
   }
 });
+
+// app.get("/findByEmail/:email", async (req, res) => {
+//   try {
+//     const data = {
+//       email: req.params.email,
+//     };
+
+//     console.log(data);
+
+//     await user
+//       .find({ email: req.params.email })
+//       .then((data) => {
+//         console.log("user: ", data);
+//         res.status(200).send(data);
+//       })
+//       .catch((err) => {
+//         res.status(500).send({ message: err.message });
+//       })
+//       .finally(() => {
+//         console.log("request completed");
+//       });
+//   } catch (error) {
+//     res.status(500).json({
+//       Title: "Something went wrong with getting user from email",
+//       Message: error.message,
+//     });
+//   }
+// });
 
 app.get("/find-user", verifyToken, async (req, res) => {
-  const token = req.cookies['auth-token'];
+  const token = req.cookies["auth-token"];
   if (!token) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET);
     const userID = decoded.id;
 
-    const foundUser = await user.findById(userID).select('-password');
+    const foundUser = await user.findById(userID).select("-password");
 
     if (!foundUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     const userToReturn = {
@@ -197,25 +207,27 @@ app.get("/find-user", verifyToken, async (req, res) => {
       email: foundUser.email,
       fName: foundUser.fName,
       lName: foundUser.lName,
-      color: foundUser.color
+      color: foundUser.color,
     };
 
     return res.status(200).json(userToReturn);
   } catch (err) {
-    return res.status(500).json({ message: "Internal Server Error", error: err});
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: err });
   }
-})
+});
 
-app.get('/logout', (req, res) => {
-  res.cookie('auth-token', '', {
+app.get("/logout", (req, res) => {
+  res.cookie("auth-token", "", {
     httpOnly: true,
     secure: true,
-    domain: 'localhost',
-    path: '/',
-    sameSite: 'none',
-    expires: new Date(0) // Set the expiration to a past date
+    domain: "localhost",
+    path: "/",
+    sameSite: "none",
+    expires: new Date(0), // Set the expiration to a past date
   });
-  res.send('Logged out');
+  res.send("Logged out");
 });
 
 app.post("/login", async (req, res) => {
@@ -231,11 +243,13 @@ app.post("/login", async (req, res) => {
     // do not check for case sensitivity for login username/email field
     const userFound = await user.findOne({
       $or: [
-        { 
-          email: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") }
+        {
+          email: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") },
         },
         {
-          username: { $regex: new RegExp("^" + data.emailOrUsername + "$", "i") },
+          username: {
+            $regex: new RegExp("^" + data.emailOrUsername + "$", "i"),
+          },
         },
       ],
     });
@@ -273,7 +287,14 @@ app.post("/login", async (req, res) => {
 
     res.header("auth-token", token).json({
       error: null,
-      data: { id: userFound._id, fName: userFound.fName, lName: userFound.lName, color: userFound.color, email: userFound.email, username: userFound.username },
+      data: {
+        id: userFound._id,
+        fName: userFound.fName,
+        lName: userFound.lName,
+        color: userFound.color,
+        email: userFound.email,
+        username: userFound.username,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -282,16 +303,6 @@ app.post("/login", async (req, res) => {
     });
   }
 });
-
-// Function to find and delete an item from the array
-const deleteItemById = (array, itemId) => {
-  const index = array.findIndex((item) => item.id === itemId);
-
-  if (index !== -1) {
-    // If the item is found, remove it from the array
-    array.splice(index, 1);
-  }
-};
 
 const generateRandomHexColor = () => {
   const hexString = Math.floor(Math.random() * 16777215).toString(16);

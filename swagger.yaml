@@ -366,11 +366,71 @@ paths:
                     type: string
         response:
           200:
-            description: user added successfully
+            description: returns user id
           400:
-            description: something wasnt found
+            description: resource not found
           500:
             description: Something went wrong, either with try/catch or thrown errors
+
+  /update-user:
+    post:
+      tags:
+        -users
+      summary: updates information about a single user
+      description: This endpoint is responsible for updating user information with the retrieved userID.
+       requestBody:
+          description: reads object information and sends the information to the relevant collections in MongoDB
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username: 
+                    type: string
+                  email:
+                    type: string
+                  fName: 
+                    type: string
+                  lName:
+                    type: string
+                  passowrd:
+                    type: string
+                  color: 
+                    type: string
+        response:
+          200:
+            description: user updated successfully
+          400:
+            description: user not found
+          401:
+            description: unauthorized
+          500:
+            description: Something went wrong, either with try/catch or thrown errors 
+
+  /delete:
+    delete:
+      tags:
+        -users
+      summary: deletes a single user
+      description: This endpoint is responsible for deleting a user information with the retrieved userID, it also deletes organizations, where the user is the owner and no suitable users where found.
+       requestBody:
+          description: reads object information and sends the information to the relevant collections in MongoDB
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userID: 
+                    type: string
+        response:
+          200:
+            description: user deleted successfully
+          401:
+            description: unauthorized
+          500:
+            description: Something went wrong, either with try/catch or thrown errors 
+
+
 
   /:
     get:
@@ -385,19 +445,6 @@ paths:
           description: error message
 
   
-  /findByEmail:
-    get:
-      tags:
-        - users
-      summary: find user by email
-      description: find and returns a single user, by the email provided
-      parameters:
-        - name: email
-      responses:
-        200:
-        description: returned user
-        500:
-          description: error message
 
   /login:
     get:
@@ -412,6 +459,17 @@ paths:
         description: returned user
         500:
           description: error message
+
+
+  /logout:
+    get:
+      tags:
+        - users
+      summary: user logout request
+      
+      responses:
+        200:
+        description: logged out
 
   /addNewOrganization:
     post:
