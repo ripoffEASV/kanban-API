@@ -4,6 +4,7 @@ const orgs = require("../Models/OrganizationModel");
 const user = require("../Models/userModel");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
+const { deleteProject } = require('../services/dbHelper');
 
 const { verifyToken, verifyUserHasUpdatePrivilege } = require("../auth");
 
@@ -51,18 +52,6 @@ app.post(
       if (!foundOrg) {
         return res.status(404).send("Organization not found.");
       }
-
-      /* if (foundOrg.ownerID !== data.ownerID) {
-        const newOwner = await user.findOne({ 
-          email: { $regex: new RegExp("^" + data.ownerID + "$", "i") }
-        });
-
-        if (!newOwner) {
-          return res.status(404).send("New owner not found.");
-        }
-
-        data.ownerID = newOwner._id;
-    } */
 
       const updatedOrg = await orgs.findByIdAndUpdate(
         { _id: orgID },
@@ -356,9 +345,9 @@ app.get("/delete-org/:orgID", verifyToken, async (req, res) => {
       return res.status(403).json({ message: "Forbidden." });
     }
 
-    org.projectIDs.forEach((project) => {
-      console.log("Please delete this project!!", project);
-    });
+    for (const project of org.projectIDs) {
+      await deleteProject(project);
+    }
 
     const result = await orgs.findByIdAndDelete(orgID);
     if (result) {

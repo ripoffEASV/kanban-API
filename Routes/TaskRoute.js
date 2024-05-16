@@ -15,8 +15,6 @@ app.post("/updateSingleTask", verifyToken, async (req, res) => {
       hoursSpent: req.body.hoursSpent,
     };
 
-    console.log(updateData);
-
     const response = await tasks.findOneAndUpdate(
       { _id: req.body.taskID },
       updateData
