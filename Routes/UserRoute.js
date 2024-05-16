@@ -262,10 +262,12 @@ app.post("/login", async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
+    const doamin = process.env.FRONTEND_DOMAIN;
+
     res.cookie("auth-token", token, {
       httpOnly: true,
       secure: true,
-      domain: "localhost",
+      domain: doamin,
       path: "/",
       sameSite: "none",
     });
