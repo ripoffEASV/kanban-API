@@ -267,6 +267,7 @@ app.post("/login", async (req, res) => {
     res.cookie("auth-token", token, {
       httpOnly: true,
       secure: true,
+      domain: doamin,
       path: "/",
       sameSite: "none",
     });
@@ -274,7 +275,7 @@ app.post("/login", async (req, res) => {
 
     res.header("auth-token", token).json({
       error: null,
-      data: { id: userFound._id, fName: userFound.fName, lName: userFound.lName, color: userFound.color, email: userFound.email, username: userFound.username },
+      data: { id: userFound._id, fName: userFound.fName, lName: userFound.lName, color: userFound.color, email: userFound.email, username: userFound.username, doamin },
     });
   } catch (error) {
     res.status(500).json({
