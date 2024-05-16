@@ -36,7 +36,7 @@ app.post("/addNewProject", async (req, res) => {
       data.projectBoards.map(async (element) => {
         let stateID = await states.create({
           stateName: element.title,
-          position: element.position
+          position: element.position,
         });
         const resultID = stateID._id;
         stateIDArray.push(resultID); // Push just the ID, not in an object
@@ -48,10 +48,9 @@ app.post("/addNewProject", async (req, res) => {
       { projectStateIDs: stateIDArray }
     );
 
-    const updatedOrg = await orgs.findByIdAndUpdate(
-      data.orgID,
-      { $push: { projectIDs: newProject._id.toString() } }
-    );
+    const updatedOrg = await orgs.findByIdAndUpdate(data.orgID, {
+      $push: { projectIDs: newProject._id.toString() },
+    });
 
     if (!updatedOrg) {
       return res.status(404).json({ message: "Organization not found." });
@@ -325,9 +324,6 @@ app.post("/getSingleProject", verifyToken, async (req, res) => {
   try {
     const projectID = req.body.projectID;
 
-
-    //const response = await projects.findOne({ _id: projectID });
-
     projects
       .aggregate([
         {
@@ -413,17 +409,6 @@ app.post("/getSingleProject", verifyToken, async (req, res) => {
           data: results,
         });
       });
-
-    // if (!response) {
-    //   throw new Error();
-    // }
-
-    // console.log(response);
-
-    // res.status(200).json({
-    //   Title: "Data retrieved",
-    //   data: response,
-    // });
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server error");
@@ -432,7 +417,6 @@ app.post("/getSingleProject", verifyToken, async (req, res) => {
 
 app.post("/updateProjectData", async (req, res) => {
   try {
-
     // if the project should have a new name, then it gets updated here
     if (req.body.newProjectName.length > 0) {
       await projects.findByIdAndUpdate(
@@ -446,8 +430,7 @@ app.post("/updateProjectData", async (req, res) => {
     //iterate over each board,
     // if the board doesnt have an ID, create it and then add it to the project
     req.body.newBoards.forEach(async (board) => {
-      if (board.ID.length === 0) {
-
+      if (board.id.length === 0) {
         const addNewProjectBoard = await states.create({
           stateName: board.stateName,
           position: board.position,
@@ -459,8 +442,8 @@ app.post("/updateProjectData", async (req, res) => {
       }
 
       if (board.delete) {
-        await tasks.deleteMany({ stateID: board.ID }).then(async () => {
-          await states.findOneAndDelete({ _id: board.ID });
+        await tasks.deleteMany({ stateID: board.id }).then(async () => {
+          await states.findOneAndDelete({ _id: board.id });
         });
       }
     });
@@ -477,7 +460,7 @@ app.post("/updateProjectData", async (req, res) => {
     req.body.newMembers.forEach(async (member) => {
       await projects.findByIdAndUpdate(
         { _id: req.body.projectID },
-        { $addToSet: { members: member._id } }
+        { $addToSet: { members: member.id } }
       );
     });
 
@@ -486,25 +469,6 @@ app.post("/updateProjectData", async (req, res) => {
     console.log(error.message);
   }
 });
-
-// app.delete("/deleteProject", verifyToken, async (req, res) => {
-//   try {
-//     console.log("here");
-//     await projects.findById(req.body.projectID).then((project) => {
-//       console.log(project);
-//       project.projectStateIDs.forEach(async (boardID, index) => {
-//         console.log(boardID.substring(13, boardID.length - 1));
-
-//         console.log(index, boardID._id);
-//         await tasks.deleteMany({ stateID: boardID._id }).then(() => {
-//           console.log("done");
-//         });
-//       });
-//     });
-//   } catch (error) {
-//     console.log(error.message);
-//   }
-// });
 
 app.delete("/deleteProject", verifyToken, async (req, res) => {
   try {
@@ -542,10 +506,12 @@ app.post("/updateStatesPos", verifyToken, async (req, res) => {
       );
     }
 
-    return res.status(200).json({ message: 'States updated successfully' });
+    return res.status(200).json({ message: "States updated successfully" });
   } catch (err) {
-    return res.status(500).json({ error: 'Internal server error:', message: err.message })
+    return res
+      .status(500)
+      .json({ error: "Internal server error:", message: err.message });
   }
-})
+});
 
 module.exports = app;
