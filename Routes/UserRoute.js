@@ -267,7 +267,6 @@ app.post("/login", async (req, res) => {
     res.cookie("auth-token", token, {
       httpOnly: true,
       secure: true,
-      domain: doamin,
       path: "/",
       sameSite: "none",
     });
