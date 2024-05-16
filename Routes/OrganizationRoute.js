@@ -4,6 +4,7 @@ const orgs = require("../Models/OrganizationModel");
 const user = require("../Models/userModel");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
+const { deleteProject } = require('../services/dbHelper');
 
 const { verifyToken, verifyUserHasUpdatePrivilege } = require("../auth");
 
@@ -318,9 +319,9 @@ app.get("/delete-org/:orgID", verifyToken, async (req, res) => {
       return res.status(403).json({ message: "Forbidden." });
     }
 
-    org.projectIDs.forEach(project => {
-      console.log('Please delete this project!!', project);
-    });
+    for (const project of org.projectIDs) {
+      await deleteProject(project);
+    }
 
     const result = await orgs.findByIdAndDelete(orgID);
     if (result) {

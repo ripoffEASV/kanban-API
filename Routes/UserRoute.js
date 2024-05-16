@@ -109,9 +109,6 @@ app.delete("/delete", verifyToken, async (req, res) => {
     const userID = decoded.id;
 
     let ownedOrgs = await org.find({ ownerID: userID });
-    deleteOrg('skibidi');
-
-    return res.status(200).json({message: `yessir temp stopped`});
 
     for (const organization of ownedOrgs) {
       let newOwnerID = organization.ownerID.filter(id => id !== userID);
@@ -124,7 +121,10 @@ app.delete("/delete", verifyToken, async (req, res) => {
         newOwnerID = [organization.orgMembers[0].userID];
       } else {
         // TODO delete the org
-        console.log(`No members available to take over organization with ID: ${organization._id}`);
+        const ownedOrgsIDs = ownedOrgs.map(o => o._id.toString());
+        for (const orgID of ownedOrgsIDs) {
+          await deleteOrg(orgID);
+        }
         continue;  // Skip to the next organization
       }
 

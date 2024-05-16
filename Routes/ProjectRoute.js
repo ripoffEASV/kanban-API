@@ -7,6 +7,7 @@ const orgs = require("../Models/OrganizationModel");
 const mongoose = require("mongoose");
 const { verifyToken } = require("../auth");
 const { ObjectId } = require("mongodb");
+const { deleteProject } = require('../services/dbHelper');
 
 app.post("/addNewProject", async (req, res) => {
   try {
@@ -507,28 +508,12 @@ app.post("/updateProjectData", async (req, res) => {
 // });
 
 app.delete("/deleteProject", verifyToken, async (req, res) => {
+  const id = req.body.projectID;
   try {
-    const project = await projects.findById(req.body.projectID);
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    for (const boardID of project.projectStateIDs) {
-      try {
-        await tasks.deleteMany({ stateID: boardID });
-      } catch (error) {
-        console.error(
-          `Error deleting tasks for board ${boardID}: ${error.message}`
-        );
-      }
-    }
-
-    // Once tasks are deleted, delete the project
-    await projects.findByIdAndDelete(req.body.projectID);
-    res.sendStatus(200);
+    await deleteProject(id);
+    return res.status(200).json({ message: 'Deleted project!' });
   } catch (error) {
-    console.error("Error deleting project:", error.message);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error", message: error.message });
   }
 });
 
