@@ -48,18 +48,6 @@ app.post("/updateOrganization/:orgID", verifyUserHasUpdatePrivilege, async (req,
       return res.status(404).send("Organization not found.");
     }
 
-    /* if (foundOrg.ownerID !== data.ownerID) {
-        const newOwner = await user.findOne({ 
-          email: { $regex: new RegExp("^" + data.ownerID + "$", "i") }
-        });
-
-        if (!newOwner) {
-          return res.status(404).send("New owner not found.");
-        }
-
-        data.ownerID = newOwner._id;
-    } */
-
     const updatedOrg = await orgs.findByIdAndUpdate(
       orgID,
       { $set: data },

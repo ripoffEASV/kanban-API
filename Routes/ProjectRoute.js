@@ -408,23 +408,12 @@ app.post("/getSingleProject", verifyToken, async (req, res) => {
         },
       ])
       .then((results) => {
-        //console.log("aggregate: ", results);
         res.status(200).json({
           Title: "Data retrieved",
           data: results,
         });
       });
 
-    // if (!response) {
-    //   throw new Error();
-    // }
-
-    // console.log(response);
-
-    // res.status(200).json({
-    //   Title: "Data retrieved",
-    //   data: response,
-    // });
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server error");
@@ -487,25 +476,6 @@ app.post("/updateProjectData", async (req, res) => {
     console.log(error.message);
   }
 });
-
-// app.delete("/deleteProject", verifyToken, async (req, res) => {
-//   try {
-//     console.log("here");
-//     await projects.findById(req.body.projectID).then((project) => {
-//       console.log(project);
-//       project.projectStateIDs.forEach(async (boardID, index) => {
-//         console.log(boardID.substring(13, boardID.length - 1));
-
-//         console.log(index, boardID._id);
-//         await tasks.deleteMany({ stateID: boardID._id }).then(() => {
-//           console.log("done");
-//         });
-//       });
-//     });
-//   } catch (error) {
-//     console.log(error.message);
-//   }
-// });
 
 app.delete("/deleteProject", verifyToken, async (req, res) => {
   const id = req.body.projectID;
